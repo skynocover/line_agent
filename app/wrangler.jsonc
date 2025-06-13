@@ -25,7 +25,8 @@
     {
       "binding": "DB",
       "database_name": "line-bot-database",
-      "database_id": ""
+      "database_id": "n/a",
+      "migrations_dir": "./drizzle"
     }
   ],
   // "ai": {
