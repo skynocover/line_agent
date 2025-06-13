@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   FileText,
   ImageIcon,
@@ -10,7 +10,7 @@ import {
   Search,
   Upload,
 } from 'lucide-react';
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
@@ -24,10 +24,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-// import { listFilesInFolder } from '@/features/cloudflare/r2';
 
 // 根據檔案類型返回對應圖示
-const getFileIcon = (category: string, type: string) => {
+const getFileIcon = (category: string) => {
   switch (category) {
     case 'document':
       return <FileText className="w-5 h-5 text-blue-600" />;
@@ -228,7 +227,7 @@ const FilesPage = () => {
             <TableBody>
               {filteredFiles.map((file) => (
                 <TableRow key={file.id} className="hover:bg-gray-50">
-                  <TableCell>{getFileIcon(file.category, file.type)}</TableCell>
+                  <TableCell>{getFileIcon(file.category)}</TableCell>
                   <TableCell>
                     {/* <Link
                         // 更換 link
@@ -271,8 +270,6 @@ const FilesPage = () => {
     </div>
   );
 };
-
-type FileSearch = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute('/files/$userId')({
   // 參數驗證
