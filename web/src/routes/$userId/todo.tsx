@@ -173,7 +173,7 @@ function RouteComponent() {
                       </Button>
                     </div>
                   ) : (
-                    <CardTitle className="text-lg flex-1">
+                    <CardTitle className={`text-lg flex-1 ${todo.completed ? 'line-through' : ''}`}>
                       {todo.title}
                       <Button
                         variant="ghost"
@@ -186,102 +186,104 @@ function RouteComponent() {
                     </CardTitle>
                   )}
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-4">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {format(new Date(todo.date), 'yyyy-MM-dd')}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <CalendarComponent
-                              mode="single"
-                              selected={new Date(todo.date)}
-                              onSelect={(date) => {
-                                if (date) {
-                                  const formattedDate = format(date, 'yyyy-MM-dd');
-                                  setTodos(
-                                    todos.map((t) =>
-                                      t.id === todo.id ? { ...t, date: formattedDate } : t,
-                                    ),
-                                  );
-                                }
-                              }}
-                              initialFocus
+                {!todo.completed && (
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Calendar className="mr-2 h-4 w-4" />
+                                {format(new Date(todo.date), 'yyyy-MM-dd')}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <CalendarComponent
+                                mode="single"
+                                selected={new Date(todo.date)}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    const formattedDate = format(date, 'yyyy-MM-dd');
+                                    setTodos(
+                                      todos.map((t) =>
+                                        t.id === todo.id ? { ...t, date: formattedDate } : t,
+                                      ),
+                                    );
+                                  }
+                                }}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <Form {...form}>
+                            <FormField
+                              control={form.control}
+                              name="isAllDay"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-y-0">
+                                  <FormLabel>全天</FormLabel>
+                                  <FormControl>
+                                    <Switch
+                                      checked={todo.isAllDay}
+                                      onCheckedChange={(checked) => {
+                                        field.onChange(checked);
+                                        handleAllDayChange(todo.id, checked);
+                                      }}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
                             />
-                          </PopoverContent>
-                        </Popover>
-                        <Form {...form}>
-                          <FormField
-                            control={form.control}
-                            name="isAllDay"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-y-0">
-                                <FormLabel>全天</FormLabel>
-                                <FormControl>
-                                  <Switch
-                                    checked={todo.isAllDay}
-                                    onCheckedChange={(checked) => {
-                                      field.onChange(checked);
-                                      handleAllDayChange(todo.id, checked);
-                                    }}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </Form>
-                      </div>
-                    </div>
-
-                    {!todo.isAllDay && (
-                      <DateTimePicker
-                        initialStartTime={todo.startTime}
-                        initialEndTime={todo.endTime}
-                        onDateTimeChange={(startTime, endTime) => {
-                          handleTimeChange(todo.id, startTime, endTime);
-                        }}
-                        className="flex-1"
-                      />
-                    )}
-
-                    {editingTodo?.id === todo.id && editingTodo.field === 'content' ? (
-                      <div className="flex items-center gap-2">
-                        <Textarea
-                          value={editValues.content}
-                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                            setEditValues({ ...editValues, content: e.target.value })
-                          }
-                          className="flex-1"
-                        />
-                        <div className="flex flex-col gap-2">
-                          <Button size="sm" onClick={() => saveEdit(todo.id)}>
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={cancelEdit}>
-                            <X className="h-4 w-4" />
-                          </Button>
+                          </Form>
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        {todo.content}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="ml-2"
-                          onClick={() => startEditing(todo.id, 'content')}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
+
+                      {!todo.isAllDay && (
+                        <DateTimePicker
+                          initialStartTime={todo.startTime}
+                          initialEndTime={todo.endTime}
+                          onDateTimeChange={(startTime, endTime) => {
+                            handleTimeChange(todo.id, startTime, endTime);
+                          }}
+                          className="flex-1"
+                        />
+                      )}
+
+                      {editingTodo?.id === todo.id && editingTodo.field === 'content' ? (
+                        <div className="flex items-center gap-2">
+                          <Textarea
+                            value={editValues.content}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                              setEditValues({ ...editValues, content: e.target.value })
+                            }
+                            className="flex-1"
+                          />
+                          <div className="flex flex-col gap-2">
+                            <Button size="sm" onClick={() => saveEdit(todo.id)}>
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {todo.content}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="ml-2"
+                            onClick={() => startEditing(todo.id, 'content')}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                )}
               </Card>
             ))}
           </div>
