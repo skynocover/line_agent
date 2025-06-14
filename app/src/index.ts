@@ -4,10 +4,12 @@ import { fileTypeFromBuffer } from 'file-type';
 
 import { createDb } from '../db';
 import { downloadFile, replyMessage } from '../lib/line';
-import { files, type Newfile } from '../db/schema';
+import { type Newfile } from '../db/schema';
 import type { Database } from '../db';
+import filesRoutes from './files/routes';
+import { FileController } from './files/controller';
 
-type Bindings = {
+export type Bindings = {
   APP_STORAGE: R2Bucket;
   LINE_ACCESS_TOKEN: string;
   LINE_CHANNEL_SECRET: string;
@@ -27,11 +29,16 @@ app.get('/', (c) => {
   return c.text('Hello World!');
 });
 
+// Mount file routes
+app.route('/api', filesRoutes);
+
 app.post('/api/webhook', async (c) => {
   const accessToken = c.env.LINE_ACCESS_TOKEN;
   const APP_STORAGE = c.env.APP_STORAGE;
   // @ts-ignore
   const db = c.get('db') as Database;
+
+  const controller = new FileController(db, c.env.APP_STORAGE);
 
   const { events }: any = await c.req.json();
 
@@ -45,7 +52,7 @@ app.post('/api/webhook', async (c) => {
           case 'video':
           case 'audio':
           case 'file':
-            return await handleGeneralFile(event, accessToken, APP_STORAGE, db);
+            return await handleGeneralFile(event, accessToken, controller);
         }
       }
     });
@@ -60,12 +67,7 @@ app.post('/api/webhook', async (c) => {
   return c.text('Success');
 });
 
-const handleGeneralFile = async (
-  event: any,
-  accessToken: string,
-  APP_STORAGE: R2Bucket,
-  db: Database,
-) => {
+const handleGeneralFile = async (event: any, accessToken: string, controller: FileController) => {
   const { source, message, replyToken } = event;
   const userId = source.userId;
   console.log('🚀 ~ handleGeneralFile ~ userId:', userId);
@@ -82,14 +84,7 @@ const handleGeneralFile = async (
       mimeType: fileType?.mime || 'application/octet-stream',
     };
 
-    await db.insert(files).values(fileInfo);
-
-    await APP_STORAGE.put(`${fileInfo.userId}/${fileInfo.fileId}`, fileBuffer, {
-      httpMetadata: {
-        contentType: fileInfo.mimeType,
-        contentDisposition: `inline; filename="${fileInfo.fileId}"`,
-      },
-    });
+    await controller.createFile(fileInfo, fileBuffer);
 
     await replyMessage({
       replyToken,
