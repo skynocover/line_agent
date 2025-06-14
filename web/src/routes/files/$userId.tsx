@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   FileText,
   ImageIcon,
@@ -13,6 +13,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,6 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { getFiles } from '@/features/files/api';
-import type { File as FileType, GetUserFilesResponse } from '../../../../app/types/api';
 
 // 根據檔案類型返回對應圖示
 const getFileIcon = (category: string) => {
@@ -117,31 +117,11 @@ const FilesPage = () => {
   const { sort, page, filter } = Route.useSearch();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [files, setFiles] = useState<FileType[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<GetUserFilesResponse['pagination']>({
-    total: 0,
-    page: 1,
-    limit: pageSize,
-    totalPages: 0,
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['files', userId, page],
+    queryFn: () => getFiles(userId, { page, limit: pageSize }),
   });
-
-  useEffect(() => {
-    const fetchFiles = async () => {
-      try {
-        setLoading(true);
-        const response = await getFiles(userId, { page, limit: pageSize });
-        setFiles(response.data);
-        setPagination(response.pagination);
-      } catch (error) {
-        console.error('Error fetching files:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFiles();
-  }, [userId, page]);
 
   const handleSortChange = (newSort: 'name' | 'size' | 'date') => {
     navigate({
@@ -159,16 +139,26 @@ const FilesPage = () => {
     });
   };
 
-  const filteredFiles = files.filter((file) =>
-    file.fileName.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredFiles =
+    data?.data.filter((file) => file.fileName.toLowerCase().includes(searchTerm.toLowerCase())) ??
+    [];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
           <p className="mt-4 text-gray-600">載入中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">載入失敗：{error.message}</p>
         </div>
       </div>
     );
@@ -261,42 +251,42 @@ const FilesPage = () => {
           )}
 
           {/* 分頁組件 */}
-          {filteredFiles.length > 0 && (
+          {filteredFiles.length > 0 && data?.pagination && (
             <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => {
-                    if (pagination.page > 1) {
+                    if (data.pagination.page > 1) {
                       navigate({
                         to: '/files/$userId',
                         params: { userId },
-                        search: { sort, page: pagination.page - 1, filter },
+                        search: { sort, page: data.pagination.page - 1, filter },
                       });
                     }
                   }}
-                  disabled={pagination.page === 1}
+                  disabled={data.pagination.page === 1}
                   className="h-8 w-8"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <div className="text-sm text-gray-600">
-                  {pagination.page}/{pagination.totalPages}
+                  {data.pagination.page}/{data.pagination.totalPages}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => {
-                    if (pagination.page < pagination.totalPages) {
+                    if (data.pagination.page < data.pagination.totalPages) {
                       navigate({
                         to: '/files/$userId',
                         params: { userId },
-                        search: { sort, page: pagination.page + 1, filter },
+                        search: { sort, page: data.pagination.page + 1, filter },
                       });
                     }
                   }}
-                  disabled={pagination.page === pagination.totalPages}
+                  disabled={data.pagination.page === data.pagination.totalPages}
                   className="h-8 w-8"
                 >
                   <ChevronRight className="h-4 w-4" />
