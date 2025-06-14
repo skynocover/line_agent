@@ -114,4 +114,17 @@ export class FileController {
 
     return updatedFile;
   }
+
+  async getFileContent(userId: string, fileId: string): Promise<ArrayBuffer | null> {
+    try {
+      const object = await this.storage.get(`${userId}/${fileId}`);
+      if (!object) {
+        return null;
+      }
+      return await object.arrayBuffer();
+    } catch (error) {
+      console.error('Error getting file content:', error);
+      return null;
+    }
+  }
 }

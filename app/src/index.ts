@@ -15,6 +15,7 @@ export type Bindings = {
   LINE_ACCESS_TOKEN: string;
   LINE_CHANNEL_SECRET: string;
   DB: D1Database;
+  ENV: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -34,6 +35,41 @@ app.get('/', (c) => {
 
 // Mount file routes
 app.route('/api', filesRoutes);
+
+app.get('/:userId/:fileId', async (c) => {
+  if (c.env.ENV !== 'local') {
+    return c.json({ error: 'File not found' }, 404);
+  }
+
+  const fileId = c.req.param('fileId');
+  const userId = c.req.param('userId');
+
+  // @ts-ignore
+  const db = c.get('db') as Database;
+  const controller = new FileController(db, c.env.APP_STORAGE);
+
+  try {
+    const file = await controller.getFile(fileId);
+    if (!file || file.userId !== userId) {
+      return c.json({ error: 'File not found' }, 404);
+    }
+
+    // Get file content from R2
+    const fileContent = await controller.getFileContent(userId, fileId);
+    if (!fileContent) {
+      return c.json({ error: 'File content not found' }, 404);
+    }
+
+    // Set appropriate headers
+    c.header('Content-Type', file.mimeType);
+    c.header('Content-Disposition', `inline; filename="${file.fileName}"`);
+
+    return c.body(fileContent);
+  } catch (error) {
+    console.error('Error fetching file:', error);
+    return c.json({ error: 'Failed to fetch file' }, 500);
+  }
+});
 
 app.post('/api/webhook', async (c) => {
   const accessToken = c.env.LINE_ACCESS_TOKEN;

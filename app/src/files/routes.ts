@@ -25,26 +25,6 @@ files.get('/:userId/files', async (c) => {
   }
 });
 
-files.get('/:userId/files/:fileId', async (c) => {
-  const fileId = c.req.param('fileId');
-  const userId = c.req.param('userId');
-
-  // @ts-ignore
-  const db = c.get('db') as Database;
-  const controller = new FileController(db, c.env.APP_STORAGE);
-
-  try {
-    const file = await controller.getFile(fileId);
-    if (!file || file.userId !== userId) {
-      return c.json({ error: 'File not found' }, 404);
-    }
-    return c.json(file);
-  } catch (error) {
-    console.error('Error fetching file:', error);
-    return c.json({ error: 'Failed to fetch file' }, 500);
-  }
-});
-
 files.delete('/:userId/files/:fileId', async (c) => {
   const fileId = c.req.param('fileId');
   const userId = c.req.param('userId');

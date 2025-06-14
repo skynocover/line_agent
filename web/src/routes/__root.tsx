@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { Menu, LogOut } from 'lucide-react';
+import { Toaster } from 'sonner';
 
-import { createRootRoute, Outlet, Link } from '@tanstack/react-router';
+import { createRootRoute, Outlet, Link, useSearch, useNavigate } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 
 import { useAuthStore } from '@/features/auth/authStore';
@@ -15,8 +16,16 @@ const RootComponent = () => {
     checkAuth();
   }, [checkAuth]);
 
+  const search = useSearch({ from: '__root__' }) as { to?: string };
+  const navigate = useNavigate();
+
+  if (search.to) {
+    navigate({ to: `/${profile?.userId}/${search.to}` });
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      <Toaster position="top-right" />
       {/* Mobile Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-14 items-center">
@@ -32,8 +41,8 @@ const RootComponent = () => {
                   Home
                 </Link>
                 <Link
-                  to="/files/$userId"
-                  params={{ userId: 'user123' }}
+                  to="/$userId/files"
+                  params={{ userId: profile?.userId || '' }}
                   className="text-lg font-medium hover:text-primary"
                 >
                   Files
@@ -48,7 +57,7 @@ const RootComponent = () => {
               Home
             </Link>
             <Link
-              to="/files/$userId"
+              to="/$userId/files"
               params={{ userId: profile?.userId || '' }}
               className="text-sm font-medium hover:text-primary [&.active]:text-primary"
             >

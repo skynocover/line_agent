@@ -14,10 +14,12 @@ import {
   Pencil,
   Trash2,
   X,
+  Copy,
 } from 'lucide-react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,6 +131,7 @@ const searchSchema = z.object({
 const paramsSchema = z.object({ userId: z.string().min(1) });
 
 const pageSize = 10;
+const fileBaseURL = import.meta.env.VITE_FILE_BASE_URL;
 
 const FilesPage = () => {
   const { userId } = Route.useParams();
@@ -220,6 +223,16 @@ const FilesPage = () => {
     if (deletingFile) {
       deleteFileMutation.mutate({ fileId: deletingFile.fileId });
     }
+  };
+
+  const handleCopyLink = (fileId: string) => {
+    const fileUrl = `${fileBaseURL}/${userId}/${fileId}`;
+    navigator.clipboard.writeText(fileUrl).then(() => {
+      toast.success('已複製檔案連結', {
+        description: '檔案連結已複製到剪貼簿',
+        duration: 2000,
+      });
+    });
   };
 
   if (isLoading) {
@@ -349,9 +362,14 @@ const FilesPage = () => {
                   <TableRow key={fileId} className="hover:bg-gray-50">
                     <TableCell>{getFileIcon(getFileCategory(getFileType(fileName)))}</TableCell>
                     <TableCell>
-                      <span className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                      <a
+                        href={`${fileBaseURL}/${userId}/${fileId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                      >
                         {fileName}
-                      </span>
+                      </a>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -367,6 +385,15 @@ const FilesPage = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyLink(fileId)}
+                          className="hover:bg-gray-100"
+                          title="複製檔案連結"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -410,8 +437,24 @@ const FilesPage = () => {
                   <div className="mt-1">{getFileIcon(getFileCategory(getFileType(fileName)))}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-blue-600 font-medium truncate">{fileName}</span>
+                      <a
+                        href={`${fileBaseURL}/${userId}/${fileId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 font-medium truncate hover:text-blue-800 hover:underline"
+                      >
+                        {fileName}
+                      </a>
                       <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyLink(fileId)}
+                          className="h-8 w-8 p-0"
+                          title="複製檔案連結"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -541,7 +584,7 @@ const FilesPage = () => {
   );
 };
 
-export const Route = createFileRoute('/files/$userId')({
+export const Route = createFileRoute('/$userId/files')({
   parseParams: (params) => paramsSchema.parse(params),
   validateSearch: searchSchema,
   beforeLoad: async () => {},
