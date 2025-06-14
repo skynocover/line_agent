@@ -246,18 +246,18 @@ const FilesPage = () => {
   const files = data?.data ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-[calc(100vh-70px)] bg-gray-50">
       {/* 頂部導航 */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-900">我的雲端硬碟</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">我的雲端硬碟</h1>
         </div>
       </header>
 
       {/* 工具列 */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="w-full sm:w-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
@@ -266,7 +266,7 @@ const FilesPage = () => {
                 onChange={(e) => handleSearch(e.target.value)}
                 onCompositionStart={() => setIsComposing(true)}
                 onCompositionEnd={() => setIsComposing(false)}
-                className="pl-10 w-80"
+                className="pl-10 w-full sm:w-80"
                 autoFocus
               />
               {searchTerm && (
@@ -279,8 +279,8 @@ const FilesPage = () => {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button className="flex items-center gap-2 w-full sm:w-auto">
               <Upload className="w-4 h-4" />
               上傳檔案
             </Button>
@@ -289,109 +289,170 @@ const FilesPage = () => {
       </div>
 
       {/* 檔案列表 */}
-      <main className="px-6 py-6">
+      <main className="px-4 sm:px-6 py-4 sm:py-6">
         <div className="bg-white rounded-lg shadow">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12"></TableHead>
-                <TableHead
-                  className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleSortChange('name')}
-                >
-                  <div className="flex items-center gap-2">
-                    檔案名稱
-                    {sort === 'name' && (
-                      <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleSortChange('type')}
-                >
-                  <div className="flex items-center gap-2">
-                    類型
-                    {sort === 'type' && (
-                      <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleSortChange('size')}
-                >
-                  <div className="flex items-center gap-2">
-                    大小
-                    {sort === 'size' && (
-                      <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleSortChange('date')}
-                >
-                  <div className="flex items-center gap-2">
-                    上傳日期
-                    {sort === 'date' && (
-                      <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead className="w-24">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {files.map(({ fileId, fileName, fileSize, createdAt }) => (
-                <TableRow key={fileId} className="hover:bg-gray-50">
-                  <TableCell>{getFileIcon(getFileCategory(getFileType(fileName)))}</TableCell>
-                  <TableCell>
-                    <span className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                      {fileName}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={getFileTypeColor(getFileType(fileName))}>
-                      {getFileType(fileName).toUpperCase()}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-gray-600">{formatFileSize(fileSize)}</TableCell>
-                  <TableCell className="text-gray-600">
-                    {createdAt ? new Date(createdAt).toLocaleString() : ''}
-                  </TableCell>
-                  <TableCell>
+          {/* 桌面版表格 */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSortChange('name')}
+                  >
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {}}
-                        className="hover:bg-gray-100"
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRename({ fileId, fileName })}
-                        className="hover:bg-gray-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete({ fileId, fileName })}
-                        className="hover:bg-gray-100"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      檔案名稱
+                      {sort === 'name' && (
+                        <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
+                      )}
                     </div>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSortChange('type')}
+                  >
+                    <div className="flex items-center gap-2">
+                      類型
+                      {sort === 'type' && (
+                        <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSortChange('size')}
+                  >
+                    <div className="flex items-center gap-2">
+                      大小
+                      {sort === 'size' && (
+                        <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSortChange('date')}
+                  >
+                    <div className="flex items-center gap-2">
+                      上傳日期
+                      {sort === 'date' && (
+                        <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="w-24">操作</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {files.map(({ fileId, fileName, fileSize, createdAt }) => (
+                  <TableRow key={fileId} className="hover:bg-gray-50">
+                    <TableCell>{getFileIcon(getFileCategory(getFileType(fileName)))}</TableCell>
+                    <TableCell>
+                      <span className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                        {fileName}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={getFileTypeColor(getFileType(fileName))}
+                      >
+                        {getFileType(fileName).toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-gray-600">{formatFileSize(fileSize)}</TableCell>
+                    <TableCell className="text-gray-600">
+                      {createdAt ? new Date(createdAt).toLocaleString() : ''}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {}}
+                          className="hover:bg-gray-100"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRename({ fileId, fileName })}
+                          className="hover:bg-gray-100"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete({ fileId, fileName })}
+                          className="hover:bg-gray-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* 手機版列表 */}
+          <div className="sm:hidden">
+            {files.map(({ fileId, fileName, fileSize, createdAt }) => (
+              <div
+                key={fileId}
+                className="p-4 border-b border-gray-200 last:border-b-0 hover:bg-gray-50"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">{getFileIcon(getFileCategory(getFileType(fileName)))}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-blue-600 font-medium truncate">{fileName}</span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {}}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRename({ fileId, fileName })}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete({ fileId, fileName })}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-gray-600">
+                      <Badge
+                        variant="secondary"
+                        className={getFileTypeColor(getFileType(fileName))}
+                      >
+                        {getFileType(fileName).toUpperCase()}
+                      </Badge>
+                      <span>{formatFileSize(fileSize)}</span>
+                      <span>{createdAt ? new Date(createdAt).toLocaleString() : ''}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {files.length === 0 && (
             <div className="text-center py-12">

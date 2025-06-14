@@ -75,7 +75,7 @@ const RootComponent = () => {
         </div>
       </header>
 
-      <main className="container py-6">
+      <main className="py-2">
         <Outlet />
       </main>
       <TanStackRouterDevtools />
