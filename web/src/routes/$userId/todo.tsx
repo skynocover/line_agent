@@ -16,6 +16,8 @@ interface Todo {
   content: string;
   startTime: string;
   endTime: string;
+  startDate: string;
+  endDate: string;
   completed: boolean;
   isAllDay: boolean;
 }
@@ -36,6 +38,8 @@ const mockTodos: TodoGroup[] = [
         content: '需要整理上週的進度並準備週會簡報',
         startTime: '09:00',
         endTime: '11:00',
+        startDate: '2024-03-20',
+        endDate: '2024-03-20',
         completed: false,
         isAllDay: false,
       },
@@ -45,6 +49,8 @@ const mockTodos: TodoGroup[] = [
         content: '討論新功能開發進度',
         startTime: '14:00',
         endTime: '15:00',
+        startDate: '2024-03-20',
+        endDate: '2024-03-20',
         completed: true,
         isAllDay: false,
       },
@@ -59,6 +65,8 @@ const mockTodos: TodoGroup[] = [
         content: '審查團隊成員的 PR',
         startTime: '10:00',
         endTime: '12:00',
+        startDate: '2024-03-21',
+        endDate: '2024-03-21',
         completed: false,
         isAllDay: false,
       },
@@ -92,6 +100,23 @@ function RouteComponent() {
     setTodos(newTodos);
   };
 
+  const handleDateTimeChange = (
+    dateIndex: number,
+    todoIndex: number,
+    startDateTime: Date,
+    endDateTime: Date,
+  ) => {
+    const newTodos = [...todos];
+    const todo = newTodos[dateIndex].todos[todoIndex];
+
+    todo.startDate = format(startDateTime, 'yyyy-MM-dd');
+    todo.endDate = format(endDateTime, 'yyyy-MM-dd');
+    todo.startTime = format(startDateTime, 'HH:mm');
+    todo.endTime = format(endDateTime, 'HH:mm');
+
+    setTodos(newTodos);
+  };
+
   const startEditing = (dateIndex: number, todoIndex: number, field: keyof Todo) => {
     const todo = todos[dateIndex].todos[todoIndex];
     setEditingTodo({ id: todo.id, field });
@@ -103,7 +128,12 @@ function RouteComponent() {
 
     const newTodos = [...todos];
     const todo = newTodos[dateIndex].todos[todoIndex];
-    todo[editingTodo.field] = editValues[editingTodo.field] as any;
+    const field = editingTodo.field;
+    const value = editValues[field];
+
+    if (field === 'startTime' || field === 'endTime' || field === 'title' || field === 'content') {
+      todo[field] = value;
+    }
 
     setTodos(newTodos);
     setEditingTodo(null);
@@ -122,10 +152,10 @@ function RouteComponent() {
           <h2 className="text-2xl font-bold">
             {format(new Date(dateGroup.date), 'yyyy年MM月dd日')}
           </h2>
-          <div className="grid gap-4">
+          <div className="grid gap-2">
             {dateGroup.todos.map((todo, todoIndex) => (
               <Card key={todo.id}>
-                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                <CardHeader className="flex flex-row items-center space-y-0">
                   <Checkbox
                     checked={todo.completed}
                     onCheckedChange={() => handleTodoToggle(dateIndex, todoIndex)}
@@ -205,67 +235,21 @@ function RouteComponent() {
                       </div>
                       {!todo.isAllDay && (
                         <div className="flex items-center gap-2">
-                          {editingTodo?.id === todo.id && editingTodo.field === 'startTime' ? (
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="time"
-                                value={editValues.startTime}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                  setEditValues({ ...editValues, startTime: e.target.value })
-                                }
-                                className="w-32"
-                              />
-                              <Button size="sm" onClick={() => saveEdit(dateIndex, todoIndex)}>
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="ghost" onClick={cancelEdit}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <span>
-                              {todo.startTime}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="ml-1"
-                                onClick={() => startEditing(dateIndex, todoIndex, 'startTime')}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </span>
-                          )}
-                          -
-                          {editingTodo?.id === todo.id && editingTodo.field === 'endTime' ? (
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="time"
-                                value={editValues.endTime}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                  setEditValues({ ...editValues, endTime: e.target.value })
-                                }
-                                className="w-32"
-                              />
-                              <Button size="sm" onClick={() => saveEdit(dateIndex, todoIndex)}>
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="ghost" onClick={cancelEdit}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <span>
-                              {todo.endTime}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="ml-1"
-                                onClick={() => startEditing(dateIndex, todoIndex, 'endTime')}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </span>
-                          )}
+                          <DateTimePicker
+                            initialStartDate={new Date(todo.startDate)}
+                            initialEndDate={new Date(todo.endDate)}
+                            initialStartTime={todo.startTime}
+                            initialEndTime={todo.endTime}
+                            onDateTimeChange={(startDateTime, endDateTime) => {
+                              handleDateTimeChange(
+                                dateIndex,
+                                todoIndex,
+                                startDateTime,
+                                endDateTime,
+                              );
+                              saveEdit(dateIndex, todoIndex);
+                            }}
+                          />
                         </div>
                       )}
                     </div>
