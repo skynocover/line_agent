@@ -16,8 +16,6 @@ interface Todo {
   content: string;
   startTime: string;
   endTime: string;
-  startDate: string;
-  endDate: string;
   completed: boolean;
   isAllDay: boolean;
 }
@@ -38,8 +36,6 @@ const mockTodos: TodoGroup[] = [
         content: '需要整理上週的進度並準備週會簡報',
         startTime: '09:00',
         endTime: '11:00',
-        startDate: '2024-03-20',
-        endDate: '2024-03-20',
         completed: false,
         isAllDay: false,
       },
@@ -49,8 +45,6 @@ const mockTodos: TodoGroup[] = [
         content: '討論新功能開發進度',
         startTime: '14:00',
         endTime: '15:00',
-        startDate: '2024-03-20',
-        endDate: '2024-03-20',
         completed: true,
         isAllDay: false,
       },
@@ -65,8 +59,6 @@ const mockTodos: TodoGroup[] = [
         content: '審查團隊成員的 PR',
         startTime: '10:00',
         endTime: '12:00',
-        startDate: '2024-03-21',
-        endDate: '2024-03-21',
         completed: false,
         isAllDay: false,
       },
@@ -90,19 +82,19 @@ function RouteComponent() {
     setTodos(newTodos);
   };
 
-  const handleDateTimeChange = (
+  const handleTimeChange = (
     dateIndex: number,
     todoIndex: number,
-    startDateTime: Date,
-    endDateTime: Date,
+    startTime: string,
+    endTime: string,
+    isAllDay: boolean,
   ) => {
     const newTodos = [...todos];
     const todo = newTodos[dateIndex].todos[todoIndex];
 
-    todo.startDate = format(startDateTime, 'yyyy-MM-dd');
-    todo.endDate = format(endDateTime, 'yyyy-MM-dd');
-    todo.startTime = format(startDateTime, 'HH:mm');
-    todo.endTime = format(endDateTime, 'HH:mm');
+    todo.startTime = startTime;
+    todo.endTime = endTime;
+    todo.isAllDay = isAllDay;
 
     setTodos(newTodos);
   };
@@ -121,7 +113,7 @@ function RouteComponent() {
     const field = editingTodo.field;
     const value = editValues[field];
 
-    if (field === 'startTime' || field === 'endTime' || field === 'title' || field === 'content') {
+    if (field === 'title' || field === 'content') {
       todo[field] = value;
     }
 
@@ -217,13 +209,11 @@ function RouteComponent() {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <DateTimePicker
-                          initialStartDate={new Date(todo.startDate)}
-                          initialEndDate={new Date(todo.endDate)}
                           initialStartTime={todo.startTime}
                           initialEndTime={todo.endTime}
-                          onDateTimeChange={(startDateTime, endDateTime) => {
-                            handleDateTimeChange(dateIndex, todoIndex, startDateTime, endDateTime);
-                            saveEdit(dateIndex, todoIndex);
+                          initialIsAllDay={todo.isAllDay}
+                          onDateTimeChange={(startTime, endTime, isAllDay) => {
+                            handleTimeChange(dateIndex, todoIndex, startTime, endTime, isAllDay);
                           }}
                         />
                       </div>
