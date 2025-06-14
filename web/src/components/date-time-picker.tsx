@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { Form, FormField, FormItem } from './ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ScrollArea } from './ui/scroll-area';
-import { useState } from 'react';
 
 const FormSchema = z.object({
   startTime: z.string().optional(),
@@ -27,9 +26,6 @@ export function DateTimePicker({
   initialEndTime = '10:00',
   className = '',
 }: DateTimePickerProps) {
-  const [startTime, setStartTime] = useState<string>(initialStartTime);
-  const [endTime, setEndTime] = useState<string>(initialEndTime);
-
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -39,7 +35,8 @@ export function DateTimePicker({
   });
 
   const handleTimeChange = () => {
-    onDateTimeChange?.(startTime, endTime);
+    const values = form.getValues();
+    onDateTimeChange?.(values.startTime || '', values.endTime || '');
   };
 
   return (
@@ -52,9 +49,8 @@ export function DateTimePicker({
             render={({ field }) => (
               <FormItem>
                 <Select
-                  defaultValue={startTime}
+                  defaultValue={field.value}
                   onValueChange={(value) => {
-                    setStartTime(value);
                     field.onChange(value);
                     handleTimeChange();
                   }}
@@ -90,9 +86,8 @@ export function DateTimePicker({
             render={({ field }) => (
               <FormItem>
                 <Select
-                  defaultValue={endTime}
+                  defaultValue={field.value}
                   onValueChange={(value) => {
-                    setEndTime(value);
                     field.onChange(value);
                     handleTimeChange();
                   }}

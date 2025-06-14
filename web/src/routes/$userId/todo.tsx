@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pencil, Check, X, Calendar } from 'lucide-react';
+import { Pencil, Check, X, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { createFileRoute } from '@tanstack/react-router';
 
@@ -76,6 +76,7 @@ function RouteComponent() {
   const [todos, setTodos] = useState<Todo[]>(mockTodos);
   const [editingTodo, setEditingTodo] = useState<{ id: number; field: keyof Todo } | null>(null);
   const [editValues, setEditValues] = useState<{ [key: string]: string }>({});
+  const [expandedTodos, setExpandedTodos] = useState<Set<number>>(new Set());
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -141,6 +142,18 @@ function RouteComponent() {
     setEditValues({});
   };
 
+  const toggleTodoExpand = (todoId: number) => {
+    setExpandedTodos((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(todoId)) {
+        newSet.delete(todoId);
+      } else {
+        newSet.add(todoId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="container mx-auto py-4 space-y-3">
       {sortedDates.map((date) => (
@@ -157,6 +170,18 @@ function RouteComponent() {
                     onCheckedChange={() => handleTodoToggle(todo.id)}
                     className="mr-2"
                   />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-0 h-6 w-6 mr-1"
+                    onClick={() => toggleTodoExpand(todo.id)}
+                  >
+                    {expandedTodos.has(todo.id) ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </Button>
                   {editingTodo?.id === todo.id && editingTodo.field === 'title' ? (
                     <div className="flex items-center gap-2 flex-1">
                       <Input
@@ -174,8 +199,13 @@ function RouteComponent() {
                       </Button>
                     </div>
                   ) : (
-                    <div className={`text-lg flex-1 ${todo.completed ? 'line-through' : ''}`}>
-                      {todo.title}
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className={`text-lg ${todo.completed ? 'line-through' : ''}`}>
+                        {todo.title}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {todo.isAllDay ? '全天' : `${todo.startTime} - ${todo.endTime}`}
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -187,7 +217,7 @@ function RouteComponent() {
                     </div>
                   )}
                 </div>
-                {!todo.completed && (
+                {!todo.completed && expandedTodos.has(todo.id) && (
                   <div className="mt-2 space-y-1 ml-6">
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-4">
