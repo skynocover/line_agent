@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pencil, Check, X, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
+import { Pencil, Check, X, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { createFileRoute } from '@tanstack/react-router';
 
@@ -27,6 +27,15 @@ interface Todo {
   completed: boolean;
   isAllDay: boolean;
 }
+
+type EditValues = {
+  title: string;
+  content: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  isAllDay: boolean;
+};
 
 // Mock data
 const mockTodos: Todo[] = [
@@ -75,7 +84,7 @@ type FormValues = z.infer<typeof FormSchema>;
 function RouteComponent() {
   const [todos, setTodos] = useState<Todo[]>(mockTodos);
   const [editingTodo, setEditingTodo] = useState<{ id: number; field: keyof Todo } | null>(null);
-  const [editValues, setEditValues] = useState<{ [key: string]: string }>({});
+  const [editValues, setEditValues] = useState<Partial<EditValues>>({});
   const [expandedTodos, setExpandedTodos] = useState<Set<number>>(new Set());
 
   const form = useForm<FormValues>({
@@ -104,19 +113,19 @@ function RouteComponent() {
     );
   };
 
-  const handleTimeChange = (todoId: number, startTime: string, endTime: string) => {
-    setTodos(todos.map((todo) => (todo.id === todoId ? { ...todo, startTime, endTime } : todo)));
-  };
-
-  const handleAllDayChange = (todoId: number, isAllDay: boolean) => {
-    setTodos(todos.map((todo) => (todo.id === todoId ? { ...todo, isAllDay } : todo)));
-  };
-
-  const startEditing = (todoId: number, field: keyof Todo) => {
+  const startEditing = (todoId: number) => {
     const todo = todos.find((t) => t.id === todoId);
     if (!todo) return;
-    setEditingTodo({ id: todoId, field });
-    setEditValues({ [field]: todo[field] as string });
+    setEditingTodo({ id: todoId, field: 'title' });
+    setEditValues({
+      title: todo.title,
+      content: todo.content,
+      date: todo.date,
+      startTime: todo.startTime,
+      endTime: todo.endTime,
+      isAllDay: todo.isAllDay,
+    });
+    setExpandedTodos(new Set([...expandedTodos, todoId]));
   };
 
   const saveEdit = (todoId: number) => {
@@ -125,9 +134,15 @@ function RouteComponent() {
     setTodos(
       todos.map((todo) => {
         if (todo.id === todoId) {
-          const field = editingTodo.field;
-          const value = editValues[field];
-          return { ...todo, [field]: value };
+          return {
+            ...todo,
+            title: editValues.title as string,
+            content: editValues.content as string,
+            date: editValues.date as string,
+            startTime: editValues.startTime as string,
+            endTime: editValues.endTime as string,
+            isAllDay: editValues.isAllDay as boolean,
+          };
         }
         return todo;
       }),
@@ -135,23 +150,13 @@ function RouteComponent() {
 
     setEditingTodo(null);
     setEditValues({});
+    setExpandedTodos(new Set([...expandedTodos].filter((id) => id !== todoId)));
   };
 
   const cancelEdit = () => {
     setEditingTodo(null);
     setEditValues({});
-  };
-
-  const toggleTodoExpand = (todoId: number) => {
-    setExpandedTodos((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(todoId)) {
-        newSet.delete(todoId);
-      } else {
-        newSet.add(todoId);
-      }
-      return newSet;
-    });
+    setExpandedTodos(new Set([...expandedTodos].filter((id) => id !== editingTodo?.id)));
   };
 
   return (
@@ -170,19 +175,7 @@ function RouteComponent() {
                     onCheckedChange={() => handleTodoToggle(todo.id)}
                     className="mr-2"
                   />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-0 h-6 w-6 mr-1"
-                    onClick={() => toggleTodoExpand(todo.id)}
-                  >
-                    {expandedTodos.has(todo.id) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </Button>
-                  {editingTodo?.id === todo.id && editingTodo.field === 'title' ? (
+                  {editingTodo?.id === todo.id ? (
                     <div className="flex items-center gap-2 flex-1">
                       <Input
                         value={editValues.title}
@@ -199,24 +192,36 @@ function RouteComponent() {
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 flex-1">
-                      <div className={`text-lg ${todo.completed ? 'line-through' : ''}`}>
-                        {todo.title}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className={`text-lg ${todo.completed ? 'line-through' : ''}`}>
+                          {todo.title}
+                        </div>
+                        <div
+                          className={`text-sm text-muted-foreground ${
+                            todo.completed ? 'line-through' : ''
+                          }`}
+                        >
+                          {todo.isAllDay ? '全天' : `${todo.startTime} - ${todo.endTime}`}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-2"
+                          onClick={() => startEditing(todo.id)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {todo.isAllDay ? '全天' : `${todo.startTime} - ${todo.endTime}`}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-2"
-                        onClick={() => startEditing(todo.id, 'title')}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
                     </div>
                   )}
                 </div>
+
+                {!expandedTodos.has(todo.id) && todo.content && !todo.completed && (
+                  <div className="text-sm text-muted-foreground line-clamp-1 ml-6">
+                    {todo.content}
+                  </div>
+                )}
                 {!todo.completed && expandedTodos.has(todo.id) && (
                   <div className="mt-2 space-y-1 ml-6">
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -225,21 +230,25 @@ function RouteComponent() {
                           <PopoverTrigger asChild>
                             <Button variant="outline" size="sm">
                               <Calendar className="mr-2 h-4 w-4" />
-                              {format(new Date(todo.date), 'yyyy-MM-dd')}
+                              {editingTodo?.id === todo.id
+                                ? format(new Date(editValues.date as string), 'yyyy-MM-dd')
+                                : format(new Date(todo.date), 'yyyy-MM-dd')}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
                             <CalendarComponent
                               mode="single"
-                              selected={new Date(todo.date)}
+                              selected={
+                                editingTodo?.id === todo.id
+                                  ? new Date(editValues.date as string)
+                                  : new Date(todo.date)
+                              }
                               onSelect={(date) => {
                                 if (date) {
                                   const formattedDate = format(date, 'yyyy-MM-dd');
-                                  setTodos(
-                                    todos.map((t) =>
-                                      t.id === todo.id ? { ...t, date: formattedDate } : t,
-                                    ),
-                                  );
+                                  if (editingTodo?.id === todo.id) {
+                                    setEditValues({ ...editValues, date: formattedDate });
+                                  }
                                 }
                               }}
                               initialFocus
@@ -255,10 +264,16 @@ function RouteComponent() {
                                 <FormLabel>全天</FormLabel>
                                 <FormControl>
                                   <Switch
-                                    checked={todo.isAllDay}
+                                    checked={
+                                      editingTodo?.id === todo.id
+                                        ? (editValues.isAllDay as boolean)
+                                        : todo.isAllDay
+                                    }
                                     onCheckedChange={(checked) => {
                                       field.onChange(checked);
-                                      handleAllDayChange(todo.id, checked);
+                                      if (editingTodo?.id === todo.id) {
+                                        setEditValues({ ...editValues, isAllDay: checked });
+                                      }
                                     }}
                                   />
                                 </FormControl>
@@ -269,18 +284,28 @@ function RouteComponent() {
                       </div>
                     </div>
 
-                    {!todo.isAllDay && (
+                    {!(editingTodo?.id === todo.id ? editValues.isAllDay : todo.isAllDay) && (
                       <DateTimePicker
-                        initialStartTime={todo.startTime}
-                        initialEndTime={todo.endTime}
+                        initialStartTime={
+                          editingTodo?.id === todo.id
+                            ? (editValues.startTime as string)
+                            : todo.startTime
+                        }
+                        initialEndTime={
+                          editingTodo?.id === todo.id
+                            ? (editValues.endTime as string)
+                            : todo.endTime
+                        }
                         onDateTimeChange={(startTime, endTime) => {
-                          handleTimeChange(todo.id, startTime, endTime);
+                          if (editingTodo?.id === todo.id) {
+                            setEditValues({ ...editValues, startTime, endTime });
+                          }
                         }}
                         className="flex-1"
                       />
                     )}
 
-                    {editingTodo?.id === todo.id && editingTodo.field === 'content' ? (
+                    {editingTodo?.id === todo.id ? (
                       <div className="flex items-center gap-2">
                         <Textarea
                           value={editValues.content}
@@ -289,27 +314,9 @@ function RouteComponent() {
                           }
                           className="flex-1"
                         />
-                        <div className="flex flex-col gap-2">
-                          <Button size="sm" onClick={() => saveEdit(todo.id)}>
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={cancelEdit}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
-                        {todo.content}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="ml-2"
-                          onClick={() => startEditing(todo.id, 'content')}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </p>
+                      <p className="text-sm text-muted-foreground">{todo.content}</p>
                     )}
                   </div>
                 )}
