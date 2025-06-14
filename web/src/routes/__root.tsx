@@ -47,6 +47,14 @@ const RootComponent = () => {
                 >
                   Files
                 </Link>
+
+                <Link
+                  to="/$userId/todo"
+                  params={{ userId: profile?.userId || '' }}
+                  className="text-lg font-medium hover:text-primary"
+                >
+                  Todo list
+                </Link>
               </nav>
             </SheetContent>
           </Sheet>
@@ -62,6 +70,13 @@ const RootComponent = () => {
               className="text-sm font-medium hover:text-primary [&.active]:text-primary"
             >
               Files
+            </Link>
+            <Link
+              to="/$userId/todo"
+              params={{ userId: profile?.userId || '' }}
+              className="text-sm font-medium hover:text-primary [&.active]:text-primary"
+            >
+              Todo list
             </Link>
           </nav>
 
