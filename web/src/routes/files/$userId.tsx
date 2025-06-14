@@ -11,9 +11,12 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
+  Pencil,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
@@ -27,7 +30,24 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getFiles } from '@/features/files/api';
+import { getFiles, deleteFile, updateFileName } from '@/features/files/api';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // 根據檔案類型返回對應圖示
 const getFileIcon = (category: string) => {
@@ -106,9 +126,7 @@ const searchSchema = z.object({
 });
 
 // 定義路由參數的驗證 schema
-const paramsSchema = z.object({
-  userId: z.string().min(1),
-});
+const paramsSchema = z.object({ userId: z.string().min(1) });
 
 const pageSize = 10;
 
@@ -116,23 +134,50 @@ const FilesPage = () => {
   const { userId } = Route.useParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [isComposing, setIsComposing] = useState(false);
   const [sort, setSort] = useState<'name' | 'type' | 'size' | 'date'>('name');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
+  const [editingFile, setEditingFile] = useState<{ fileId: string; fileName: string } | null>(null);
+  const [deletingFile, setDeletingFile] = useState<{ fileId: string; fileName: string } | null>(
+    null,
+  );
+  const [newFileName, setNewFileName] = useState('');
+  const queryClient = useQueryClient();
 
   // Add debounce effect
   useEffect(() => {
+    if (isComposing) return;
+
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 500); // 500ms delay
+    }, 500); // 增加延遲時間到 1000ms
 
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, isComposing]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['files', userId, page, sort, order, debouncedSearchTerm],
     queryFn: () =>
       getFiles(userId, { page, limit: pageSize, sort, order, filter: debouncedSearchTerm }),
+  });
+
+  const deleteFileMutation = useMutation({
+    mutationFn: ({ fileId }: { fileId: string }) => deleteFile(userId, fileId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files', userId] });
+      setDeletingFile(null);
+    },
+  });
+
+  const updateFileNameMutation = useMutation({
+    mutationFn: ({ fileId, fileName }: { fileId: string; fileName: string }) =>
+      updateFileName(userId, fileId, fileName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files', userId] });
+      setEditingFile(null);
+      setNewFileName('');
+    },
   });
 
   const handleSortChange = (newSort: 'name' | 'type' | 'size' | 'date') => {
@@ -147,6 +192,34 @@ const FilesPage = () => {
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const handleRename = (file: { fileId: string; fileName: string }) => {
+    setEditingFile(file);
+    setNewFileName(file.fileName);
+  };
+
+  const handleDelete = (file: { fileId: string; fileName: string }) => {
+    setDeletingFile(file);
+  };
+
+  const handleRenameSubmit = () => {
+    if (editingFile && newFileName.trim()) {
+      updateFileNameMutation.mutate({
+        fileId: editingFile.fileId,
+        fileName: newFileName.trim(),
+      });
+    }
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deletingFile) {
+      deleteFileMutation.mutate({ fileId: deletingFile.fileId });
+    }
   };
 
   if (isLoading) {
@@ -191,9 +264,19 @@ const FilesPage = () => {
                 placeholder="搜尋檔案..."
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
                 className="pl-10 w-80"
                 autoFocus
               />
+              {searchTerm && (
+                <button
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -278,14 +361,32 @@ const FilesPage = () => {
                     {createdAt ? new Date(createdAt).toLocaleString() : ''}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {}}
-                      className="hover:bg-gray-100"
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {}}
+                        className="hover:bg-gray-100"
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRename({ fileId, fileName })}
+                        className="hover:bg-gray-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete({ fileId, fileName })}
+                        className="hover:bg-gray-100"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -329,6 +430,52 @@ const FilesPage = () => {
           )}
         </div>
       </main>
+
+      {/* 重新命名對話框 */}
+      <Dialog open={!!editingFile} onOpenChange={() => setEditingFile(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>重新命名檔案</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              placeholder="輸入新的檔案名稱"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingFile(null)}>
+              取消
+            </Button>
+            <Button onClick={handleRenameSubmit} disabled={!newFileName.trim()}>
+              確認
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 刪除確認對話框 */}
+      <AlertDialog open={!!deletingFile} onOpenChange={() => setDeletingFile(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認刪除</AlertDialogTitle>
+            <AlertDialogDescription>
+              您確定要刪除檔案 "{deletingFile?.fileName}" 嗎？此操作無法復原。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              刪除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
