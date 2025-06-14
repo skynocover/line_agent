@@ -19,7 +19,7 @@ const RootComponent = () => {
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center">
+        <div className="flex h-14 items-center">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -49,7 +49,7 @@ const RootComponent = () => {
             </Link>
             <Link
               to="/files/$userId"
-              params={{ userId: 'user123' }}
+              params={{ userId: profile?.userId || '' }}
               className="text-sm font-medium hover:text-primary [&.active]:text-primary"
             >
               Files
