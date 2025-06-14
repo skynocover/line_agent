@@ -90,16 +90,6 @@ function RouteComponent() {
     setTodos(newTodos);
   };
 
-  const handleAllDayToggle = (dateIndex: number, todoIndex: number) => {
-    const newTodos = [...todos];
-    newTodos[dateIndex].todos[todoIndex].isAllDay = !newTodos[dateIndex].todos[todoIndex].isAllDay;
-    if (newTodos[dateIndex].todos[todoIndex].isAllDay) {
-      newTodos[dateIndex].todos[todoIndex].startTime = '00:00';
-      newTodos[dateIndex].todos[todoIndex].endTime = '23:59';
-    }
-    setTodos(newTodos);
-  };
-
   const handleDateTimeChange = (
     dateIndex: number,
     todoIndex: number,
@@ -226,32 +216,17 @@ function RouteComponent() {
                     )}
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={todo.isAllDay}
-                          onCheckedChange={() => handleAllDayToggle(dateIndex, todoIndex)}
-                          className="h-4 w-4"
+                        <DateTimePicker
+                          initialStartDate={new Date(todo.startDate)}
+                          initialEndDate={new Date(todo.endDate)}
+                          initialStartTime={todo.startTime}
+                          initialEndTime={todo.endTime}
+                          onDateTimeChange={(startDateTime, endDateTime) => {
+                            handleDateTimeChange(dateIndex, todoIndex, startDateTime, endDateTime);
+                            saveEdit(dateIndex, todoIndex);
+                          }}
                         />
-                        <span>全天</span>
                       </div>
-                      {!todo.isAllDay && (
-                        <div className="flex items-center gap-2">
-                          <DateTimePicker
-                            initialStartDate={new Date(todo.startDate)}
-                            initialEndDate={new Date(todo.endDate)}
-                            initialStartTime={todo.startTime}
-                            initialEndTime={todo.endTime}
-                            onDateTimeChange={(startDateTime, endDateTime) => {
-                              handleDateTimeChange(
-                                dateIndex,
-                                todoIndex,
-                                startDateTime,
-                                endDateTime,
-                              );
-                              saveEdit(dateIndex, todoIndex);
-                            }}
-                          />
-                        </div>
-                      )}
                     </div>
                   </div>
                 </CardContent>

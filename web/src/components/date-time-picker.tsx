@@ -7,11 +7,12 @@ import { z } from 'zod';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { Calendar } from './ui/calendar';
-import { Form, FormControl, FormField, FormItem } from './ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel } from './ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ScrollArea } from './ui/scroll-area';
+import { Switch } from './ui/switch';
 
 const FormSchema = z.object({
   startDate: z.date({
@@ -26,14 +27,18 @@ const FormSchema = z.object({
   endTime: z.string({
     required_error: 'End time is required.',
   }),
+  isAllDay: z.boolean(),
 });
 
+type FormValues = z.infer<typeof FormSchema>;
+
 export interface DateTimePickerProps {
-  onDateTimeChange?: (startDateTime: Date, endDateTime: Date) => void;
+  onDateTimeChange?: (startDateTime: Date, endDateTime: Date, isAllDay: boolean) => void;
   initialStartDate?: Date;
   initialEndDate?: Date;
   initialStartTime?: string;
   initialEndTime?: string;
+  initialIsAllDay?: boolean;
 }
 
 export function DateTimePicker({
@@ -42,6 +47,7 @@ export function DateTimePicker({
   initialEndDate,
   initialStartTime = '09:00',
   initialEndTime = '10:00',
+  initialIsAllDay = false,
 }: DateTimePickerProps) {
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [isEndOpen, setIsEndOpen] = useState(false);
@@ -49,14 +55,16 @@ export function DateTimePicker({
   const [endDate, setEndDate] = useState<Date | null>(initialEndDate || null);
   const [startTime, setStartTime] = useState<string>(initialStartTime);
   const [endTime, setEndTime] = useState<string>(initialEndTime);
+  const [isAllDay, setIsAllDay] = useState<boolean>(initialIsAllDay);
 
-  const form = useForm<z.infer<typeof FormSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       startDate: initialStartDate,
       endDate: initialEndDate,
       startTime: initialStartTime,
       endTime: initialEndTime,
+      isAllDay: initialIsAllDay,
     },
   });
 
@@ -71,16 +79,36 @@ export function DateTimePicker({
       const endDateTime = new Date(endDate);
       endDateTime.setHours(parseInt(endHours), parseInt(endMinutes));
 
-      onDateTimeChange?.(startDateTime, endDateTime);
+      onDateTimeChange?.(startDateTime, endDateTime, isAllDay);
     }
   };
 
   return (
     <Form {...form}>
-      <form className="space-y-4">
-        <div className="flex items-center gap-4">
+      <form className="space-y-2">
+        <FormField
+          control={form.control}
+          name="isAllDay"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between space-y-0">
+              <FormLabel>全天</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={(checked) => {
+                    field.onChange(checked);
+                    setIsAllDay(checked);
+                    handleDateTimeChange();
+                  }}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
           <div className="space-y-2">
-            <div className="flex gap-2">
+            <div className="flex flex-row gap-2">
               <FormField
                 control={form.control}
                 name="startDate"
@@ -119,48 +147,50 @@ export function DateTimePicker({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <Select
-                      defaultValue={startTime}
-                      onValueChange={(value) => {
-                        setStartTime(value);
-                        field.onChange(value);
-                        handleDateTimeChange();
-                      }}
-                    >
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <ScrollArea className="h-[200px]">
-                          {Array.from({ length: 96 }).map((_, i) => {
-                            const hour = Math.floor(i / 4)
-                              .toString()
-                              .padStart(2, '0');
-                            const minute = ((i % 4) * 15).toString().padStart(2, '0');
-                            return (
-                              <SelectItem key={i} value={`${hour}:${minute}`}>
-                                {hour}:{minute}
-                              </SelectItem>
-                            );
-                          })}
-                        </ScrollArea>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
+              {!isAllDay && (
+                <FormField
+                  control={form.control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select
+                        defaultValue={startTime}
+                        onValueChange={(value) => {
+                          setStartTime(value);
+                          field.onChange(value);
+                          handleDateTimeChange();
+                        }}
+                      >
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <ScrollArea className="h-[200px]">
+                            {Array.from({ length: 96 }).map((_, i) => {
+                              const hour = Math.floor(i / 4)
+                                .toString()
+                                .padStart(2, '0');
+                              const minute = ((i % 4) * 15).toString().padStart(2, '0');
+                              return (
+                                <SelectItem key={i} value={`${hour}:${minute}`}>
+                                  {hour}:{minute}
+                                </SelectItem>
+                              );
+                            })}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
           </div>
 
           <div className="flex items-center justify-center">~</div>
 
           <div className="space-y-2">
-            <div className="flex gap-2">
+            <div className="flex flex-row gap-2">
               <FormField
                 control={form.control}
                 name="endDate"
@@ -199,41 +229,43 @@ export function DateTimePicker({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <Select
-                      defaultValue={endTime}
-                      onValueChange={(value) => {
-                        setEndTime(value);
-                        field.onChange(value);
-                        handleDateTimeChange();
-                      }}
-                    >
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <ScrollArea className="h-[200px]">
-                          {Array.from({ length: 96 }).map((_, i) => {
-                            const hour = Math.floor(i / 4)
-                              .toString()
-                              .padStart(2, '0');
-                            const minute = ((i % 4) * 15).toString().padStart(2, '0');
-                            return (
-                              <SelectItem key={i} value={`${hour}:${minute}`}>
-                                {hour}:{minute}
-                              </SelectItem>
-                            );
-                          })}
-                        </ScrollArea>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
+              {!isAllDay && (
+                <FormField
+                  control={form.control}
+                  name="endTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select
+                        defaultValue={endTime}
+                        onValueChange={(value) => {
+                          setEndTime(value);
+                          field.onChange(value);
+                          handleDateTimeChange();
+                        }}
+                      >
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <ScrollArea className="h-[200px]">
+                            {Array.from({ length: 96 }).map((_, i) => {
+                              const hour = Math.floor(i / 4)
+                                .toString()
+                                .padStart(2, '0');
+                              const minute = ((i % 4) * 15).toString().padStart(2, '0');
+                              return (
+                                <SelectItem key={i} value={`${hour}:${minute}`}>
+                                  {hour}:{minute}
+                                </SelectItem>
+                              );
+                            })}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
           </div>
         </div>
