@@ -10,17 +10,27 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL + '/api';
 
 export const getFiles = async (
   userId: string,
-  params?: PaginationParams,
+  params?: PaginationParams & {
+    sort?: string;
+    order?: 'asc' | 'desc';
+    filter?: string;
+  },
 ): Promise<GetUserFilesResponse> => {
   const searchParams = new URLSearchParams();
   if (params?.page) searchParams.append('page', params.page.toString());
   if (params?.limit) searchParams.append('limit', params.limit.toString());
+  if (params?.sort) searchParams.append('sort', params.sort);
+  if (params?.order) searchParams.append('order', params.order);
+  if (params?.filter) searchParams.append('filter', params.filter);
 
   try {
     const response = await axios.get(`${API_BASE_URL}/${userId}/files`, {
       params: {
         page: params?.page,
         limit: params?.limit,
+        sort: params?.sort,
+        order: params?.order,
+        filter: params?.filter,
       },
     });
     return response.data;

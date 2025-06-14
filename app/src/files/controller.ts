@@ -8,15 +8,45 @@ import type { GetUserFilesResponse, ErrorResponse, File } from '../../types/api'
 export class FileController {
   constructor(private db: Database, private storage: R2Bucket) {}
 
-  async getUserFiles(userId: string, page: number, limit: number): Promise<GetUserFilesResponse> {
+  async getUserFiles(
+    userId: string,
+    page: number,
+    limit: number,
+    sort?: string,
+    order?: 'asc' | 'desc',
+    filter?: string,
+  ): Promise<GetUserFilesResponse> {
     const offset = (page - 1) * limit;
 
-    const userFiles = await this.db.query.files.findMany({
-      where: (files, { eq }) => eq(files.userId, userId),
+    const query = this.db.query.files.findMany({
+      where: (files, { eq, and, like }) => {
+        const conditions = [eq(files.userId, userId)];
+        if (filter) {
+          conditions.push(like(files.fileName, `%${filter}%`));
+        }
+        return and(...conditions);
+      },
       limit,
       offset,
-      orderBy: (files, { desc }) => [desc(files.createdAt)],
+      orderBy: (files, { asc, desc }) => {
+        console.log('sort', sort);
+        if (sort === 'name') {
+          return order === 'desc' ? [desc(files.fileName)] : [asc(files.fileName)];
+        }
+        if (sort === 'size') {
+          return order === 'desc' ? [desc(files.fileSize)] : [asc(files.fileSize)];
+        }
+        if (sort === 'date') {
+          return order === 'desc' ? [desc(files.createdAt)] : [asc(files.createdAt)];
+        }
+        if (sort === 'type') {
+          return order === 'desc' ? [desc(files.mimeType)] : [asc(files.mimeType)];
+        }
+        return [desc(files.createdAt)];
+      },
     });
+
+    const userFiles = await query;
 
     const totalCount = await this.db
       .select({ count: sql<number>`count(*)` })

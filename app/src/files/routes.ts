@@ -8,13 +8,16 @@ files.get('/:userId/files', async (c) => {
   const userId = c.req.param('userId');
   const page = parseInt(c.req.query('page') || '1');
   const limit = parseInt(c.req.query('limit') || '10');
+  const sort = c.req.query('sort');
+  const order = c.req.query('order') as 'asc' | 'desc' | undefined;
+  const filter = c.req.query('filter');
 
   // @ts-ignore
   const db = c.get('db') as Database;
   const controller = new FileController(db, c.env.APP_STORAGE);
 
   try {
-    const response = await controller.getUserFiles(userId, page, limit);
+    const response = await controller.getUserFiles(userId, page, limit, sort, order, filter);
     return c.json(response);
   } catch (error) {
     console.error('Error fetching user files:', error);

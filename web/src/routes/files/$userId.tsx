@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FileText,
   ImageIcon,
@@ -12,7 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
@@ -99,7 +99,8 @@ const formatFileSize = (bytes: number) => {
 
 // 定義搜索參數的驗證 schema
 const searchSchema = z.object({
-  sort: z.enum(['name', 'size', 'date']).optional().default('name'),
+  sort: z.enum(['name', 'type', 'size', 'date']).optional().default('name'),
+  order: z.enum(['asc', 'desc']).optional().default('asc'),
   page: z.coerce.number().min(1).optional().default(1),
   filter: z.string().optional(),
 });
@@ -112,36 +113,41 @@ const paramsSchema = z.object({
 const pageSize = 10;
 
 const FilesPage = () => {
-  const navigate = useNavigate();
   const { userId } = Route.useParams();
-  const { sort, page, filter } = Route.useSearch();
-
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [sort, setSort] = useState<'name' | 'type' | 'size' | 'date'>('name');
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState(1);
+
+  // Add debounce effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['files', userId, page],
-    queryFn: () => getFiles(userId, { page, limit: pageSize }),
+    queryKey: ['files', userId, page, sort, order, debouncedSearchTerm],
+    queryFn: () =>
+      getFiles(userId, { page, limit: pageSize, sort, order, filter: debouncedSearchTerm }),
   });
 
-  const handleSortChange = (newSort: 'name' | 'size' | 'date') => {
-    navigate({
-      to: '/files/$userId',
-      params: { userId },
-      search: { sort: newSort, page, filter },
-    });
+  const handleSortChange = (newSort: 'name' | 'type' | 'size' | 'date') => {
+    if (sort === newSort) {
+      setOrder(order === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSort(newSort);
+      setOrder('asc');
+    }
+    setPage(1);
   };
 
-  const handleFilterChange = (newFilter: string) => {
-    navigate({
-      to: '/files/$userId',
-      params: { userId },
-      search: { sort, page: 1, filter: newFilter },
-    });
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
   };
-
-  const filteredFiles =
-    data?.data.filter((file) => file.fileName.toLowerCase().includes(searchTerm.toLowerCase())) ??
-    [];
 
   if (isLoading) {
     return (
@@ -164,6 +170,8 @@ const FilesPage = () => {
     );
   }
 
+  const files = data?.data ?? [];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 頂部導航 */}
@@ -182,8 +190,9 @@ const FilesPage = () => {
               <Input
                 placeholder="搜尋檔案..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 className="pl-10 w-80"
+                autoFocus
               />
             </div>
           </div>
@@ -203,15 +212,55 @@ const FilesPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12"></TableHead>
-                <TableHead>檔案名稱</TableHead>
-                <TableHead>類型</TableHead>
-                <TableHead>大小</TableHead>
-                <TableHead>上傳日期</TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleSortChange('name')}
+                >
+                  <div className="flex items-center gap-2">
+                    檔案名稱
+                    {sort === 'name' && (
+                      <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleSortChange('type')}
+                >
+                  <div className="flex items-center gap-2">
+                    類型
+                    {sort === 'type' && (
+                      <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleSortChange('size')}
+                >
+                  <div className="flex items-center gap-2">
+                    大小
+                    {sort === 'size' && (
+                      <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleSortChange('date')}
+                >
+                  <div className="flex items-center gap-2">
+                    上傳日期
+                    {sort === 'date' && (
+                      <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
                 <TableHead className="w-24">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredFiles.map(({ fileId, fileName, fileSize, createdAt }) => (
+              {files.map(({ fileId, fileName, fileSize, createdAt }) => (
                 <TableRow key={fileId} className="hover:bg-gray-50">
                   <TableCell>{getFileIcon(getFileCategory(getFileType(fileName)))}</TableCell>
                   <TableCell>
@@ -243,7 +292,7 @@ const FilesPage = () => {
             </TableBody>
           </Table>
 
-          {filteredFiles.length === 0 && (
+          {files.length === 0 && (
             <div className="text-center py-12">
               <File className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">找不到符合條件的檔案</p>
@@ -251,42 +300,26 @@ const FilesPage = () => {
           )}
 
           {/* 分頁組件 */}
-          {filteredFiles.length > 0 && data?.pagination && (
+          {files.length > 0 && data?.pagination && (
             <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => {
-                    if (data.pagination.page > 1) {
-                      navigate({
-                        to: '/files/$userId',
-                        params: { userId },
-                        search: { sort, page: data.pagination.page - 1, filter },
-                      });
-                    }
-                  }}
-                  disabled={data.pagination.page === 1}
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
                   className="h-8 w-8"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <div className="text-sm text-gray-600">
-                  {data.pagination.page}/{data.pagination.totalPages}
+                  {page}/{data.pagination.totalPages}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => {
-                    if (data.pagination.page < data.pagination.totalPages) {
-                      navigate({
-                        to: '/files/$userId',
-                        params: { userId },
-                        search: { sort, page: data.pagination.page + 1, filter },
-                      });
-                    }
-                  }}
-                  disabled={data.pagination.page === data.pagination.totalPages}
+                  onClick={() => setPage(page + 1)}
+                  disabled={page === data.pagination.totalPages}
                   className="h-8 w-8"
                 >
                   <ChevronRight className="h-4 w-4" />
