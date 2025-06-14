@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FileText,
   ImageIcon,
@@ -9,6 +9,8 @@ import {
   Download,
   Search,
   Upload,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
@@ -24,6 +26,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { getFiles } from '@/features/files/api';
+import type { File as FileType, GetUserFilesResponse } from '../../../../app/types/api';
 
 // 根據檔案類型返回對應圖示
 const getFileIcon = (category: string) => {
@@ -105,17 +109,39 @@ const paramsSchema = z.object({
   userId: z.string().min(1),
 });
 
+const pageSize = 10;
+
 const FilesPage = () => {
   const navigate = useNavigate();
-  const { userId } = Route.useParams(); // 完全型別安全
-  const { sort, page, filter } = Route.useSearch(); // 完全型別安全
-  // TODO: 確認這裡的 loader data
-  //   const files = Route.useLoaderData(); // 完全型別安全
+  const { userId } = Route.useParams();
+  const { sort, page, filter } = Route.useSearch();
 
   const [searchTerm, setSearchTerm] = useState('');
-  // const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [files, setFiles] = useState<any[]>([]);
+  const [files, setFiles] = useState<FileType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<GetUserFilesResponse['pagination']>({
+    total: 0,
+    page: 1,
+    limit: pageSize,
+    totalPages: 0,
+  });
+
+  useEffect(() => {
+    const fetchFiles = async () => {
+      try {
+        setLoading(true);
+        const response = await getFiles(userId, { page, limit: pageSize });
+        setFiles(response.data);
+        setPagination(response.pagination);
+      } catch (error) {
+        console.error('Error fetching files:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFiles();
+  }, [userId, page]);
 
   const handleSortChange = (newSort: 'name' | 'size' | 'date') => {
     navigate({
@@ -129,54 +155,24 @@ const FilesPage = () => {
     navigate({
       to: '/files/$userId',
       params: { userId },
-      search: { sort, page: 1, filter: newFilter }, // 重置到第一頁
+      search: { sort, page: 1, filter: newFilter },
     });
   };
 
-  //   const goToFile = (fileId: string) => {
-  //     navigate({
-  //       to: '/files/$userId/$fileId',
-  //       params: { userId, fileId },
-  //     });
-  //   };
-
-  //   useEffect(() => {
-  //     const fetchFiles = async () => {
-  //       try {
-  //         // const filesData = await listFilesInFolder(userId);
-  //         // const formattedFiles = filesData.map((file) => ({
-  //         //   id: file.name,
-  //         //   name: file.name,
-  //         //   type: getFileType(file.name || ''),
-  //         //   size: formatFileSize(file.size),
-  //         //   uploadDate: new Date(file.uploaded).toLocaleString(),
-  //         //   category: getFileCategory(getFileType(file.name || '')),
-  //         // }));
-  //         // setFiles(formattedFiles);
-  //       } catch (error) {
-  //         console.error('Error fetching files:', error);
-  //       } finally {
-  //         setLoading(false);
-  //       }
-  //     };
-
-  //     fetchFiles();
-  //   }, [params.userId]);
-
   const filteredFiles = files.filter((file) =>
-    file.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    file.fileName.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  //   if (loading) {
-  //     return (
-  //       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-  //         <div className="text-center">
-  //           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-  //           <p className="mt-4 text-gray-600">載入中...</p>
-  //         </div>
-  //       </div>
-  //     );
-  //   }
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">載入中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -217,7 +213,7 @@ const FilesPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12"></TableHead>
-                <TableHead>ID</TableHead>
+                <TableHead>檔案名稱</TableHead>
                 <TableHead>類型</TableHead>
                 <TableHead>大小</TableHead>
                 <TableHead>上傳日期</TableHead>
@@ -225,25 +221,23 @@ const FilesPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredFiles.map((file) => (
-                <TableRow key={file.id} className="hover:bg-gray-50">
-                  <TableCell>{getFileIcon(file.category)}</TableCell>
+              {filteredFiles.map(({ fileId, fileName, fileSize, createdAt }) => (
+                <TableRow key={fileId} className="hover:bg-gray-50">
+                  <TableCell>{getFileIcon(getFileCategory(getFileType(fileName)))}</TableCell>
                   <TableCell>
-                    {/* <Link
-                        // 更換 link
-                        href={`/api/files/${userId}/${file.id}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                      >
-                        {file.name}
-                      </Link> */}
+                    <span className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                      {fileName}
+                    </span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className={getFileTypeColor(file.type)}>
-                      {file.type.toUpperCase()}
+                    <Badge variant="secondary" className={getFileTypeColor(getFileType(fileName))}>
+                      {getFileType(fileName).toUpperCase()}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-gray-600">{file.size}</TableCell>
-                  <TableCell className="text-gray-600">{file.uploadDate}</TableCell>
+                  <TableCell className="text-gray-600">{formatFileSize(fileSize)}</TableCell>
+                  <TableCell className="text-gray-600">
+                    {createdAt ? new Date(createdAt).toLocaleString() : ''}
+                  </TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
@@ -265,6 +259,51 @@ const FilesPage = () => {
               <p className="text-gray-500">找不到符合條件的檔案</p>
             </div>
           )}
+
+          {/* 分頁組件 */}
+          {filteredFiles.length > 0 && (
+            <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (pagination.page > 1) {
+                      navigate({
+                        to: '/files/$userId',
+                        params: { userId },
+                        search: { sort, page: pagination.page - 1, filter },
+                      });
+                    }
+                  }}
+                  disabled={pagination.page === 1}
+                  className="h-8 w-8"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-sm text-gray-600">
+                  {pagination.page}/{pagination.totalPages}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (pagination.page < pagination.totalPages) {
+                      navigate({
+                        to: '/files/$userId',
+                        params: { userId },
+                        search: { sort, page: pagination.page + 1, filter },
+                      });
+                    }
+                  }}
+                  disabled={pagination.page === pagination.totalPages}
+                  className="h-8 w-8"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
@@ -272,74 +311,16 @@ const FilesPage = () => {
 };
 
 export const Route = createFileRoute('/files/$userId')({
-  // 參數驗證
   parseParams: (params) => paramsSchema.parse(params),
-
-  // 搜索參數驗證
   validateSearch: searchSchema,
-
-  // 載入前檢查
-  beforeLoad: async ({ params, location }) => {
-    const getCurrentUser = () => {
-      return {
-        id: 'user123',
-        isAdmin: true,
-      };
-    };
-    const currentUser = getCurrentUser(); // 假設這是獲取當前用戶的函數
-
-    // 檢查是否有權限訪問此用戶的檔案
-    // if (!currentUser) {
-    //   throw redirect({
-    //     to: '/login',
-    //     search: {
-    //       redirect: location.href,
-    //     },
-    //   });
-    // }
-
-    // if (currentUser.id !== params.userId && !currentUser.isAdmin) {
-    //   throw redirect({
-    //     to: '/unauthorized',
-    //   });
-    // }
-
-    return {
-      currentUser,
-    };
-  },
-
-  // 數據載入器
-  loader: async ({ params, search }) => {
-    console.log('Loading files for user:', params.userId);
-    console.log('Search params:', search);
-
-    // 模擬 API 調用
-    // const response = await fetch(
-    //   `/api/users/${params.userId}/files?sort=${search.sort}&page=${search.page}&filter=${
-    //     search.filter || ''
-    //   }`,
-    // );
-
-    // if (!response.ok) {
-    //   throw new Error(`Failed to load files for user ${params.userId}`);
-    // }
-
-    // return response.json();
-    return;
-  },
-
-  // 錯誤處理
+  beforeLoad: async () => {},
+  loader: async () => {},
   errorComponent: ({ error }) => (
     <div className="p-4 text-red-600">
       <h2>Error loading files</h2>
       <p>{error.message}</p>
     </div>
   ),
-
-  // 載入中狀態
   pendingComponent: () => <div className="p-4">Loading files...</div>,
-
-  // 頁面組件
   component: FilesPage,
 });

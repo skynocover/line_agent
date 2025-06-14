@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { R2Bucket, D1Database } from '@cloudflare/workers-types';
 import { fileTypeFromBuffer } from 'file-type';
+import { cors } from 'hono/cors';
 
 import { createDb } from '../db';
 import { downloadFile, replyMessage } from '../lib/line';
@@ -17,6 +18,8 @@ export type Bindings = {
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
+
+app.use('*', cors());
 
 app.use('*', async (c, next) => {
   // Attach db to context manually to avoid type error
