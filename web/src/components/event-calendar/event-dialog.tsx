@@ -55,6 +55,7 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
   const [error, setError] = useState<string | null>(null);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     console.log('EventDialog received event:', event);
@@ -72,6 +73,7 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
       setAllDay(event.allDay || false);
       setLocation(event.location || '');
       setColor((event.color as EventColor) || 'sky');
+      setCompleted(event.completed || false);
       setError(null); // Reset error when opening dialog
     } else {
       resetForm();
@@ -88,6 +90,7 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
     setAllDay(false);
     setLocation('');
     setColor('blue');
+    setCompleted(false);
     setError(null);
   };
 
@@ -157,6 +160,7 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
       allDay,
       location,
       color,
+      completed,
     });
   };
 
@@ -220,19 +224,29 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
           </div>
         )}
         <div className="grid gap-4 py-4">
-          <div className="*:not-first:mt-1.5">
-            <Label htmlFor="title">Title</Label>
-            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-
-          <div className="*:not-first:mt-1.5">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
+          <div className="flex items-center gap-4">
+            <div className="flex-1 *:not-first:mt-1.5">
+              <Label htmlFor="title">Title</Label>
+              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <Checkbox
+                id="completed"
+                checked={completed}
+                onCheckedChange={(checked) => {
+                  setCompleted(checked === true);
+                  // Save immediately when completed status changes
+                  if (event?.id) {
+                    const updatedEvent = {
+                      ...event,
+                      completed: checked === true,
+                    };
+                    onSave(updatedEvent);
+                  }
+                }}
+              />
+              <Label htmlFor="completed">Completed</Label>
+            </div>
           </div>
 
           <div className="flex gap-4">
@@ -368,9 +382,19 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
           </div>
 
           <div className="*:not-first:mt-1.5">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          {/* <div className="*:not-first:mt-1.5">
             <Label htmlFor="location">Location</Label>
             <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
-          </div>
+          </div> */}
           <fieldset className="space-y-4">
             <legend className="text-foreground text-sm leading-none font-medium">Etiquette</legend>
             <RadioGroup
