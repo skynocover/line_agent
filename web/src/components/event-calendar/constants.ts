@@ -16,8 +16,8 @@ export const StartHour = 7; // Start at 7 AM
 export const EndHour = 20; // End at 8 PM
 
 // Default start and end times
-export const DefaultStartHour = 9; // 9 AM
-export const DefaultEndHour = 10; // 10 AM
+export const DefaultStartHour = 10; // 10 AM
+export const DefaultEndHour = 11; // 11 AM
 
 export const etiquettes = [
   {

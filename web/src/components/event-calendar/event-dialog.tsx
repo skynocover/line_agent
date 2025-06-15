@@ -56,12 +56,8 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
 
-  // Debug log to check what event is being passed
   useEffect(() => {
     console.log('EventDialog received event:', event);
-  }, [event]);
-
-  useEffect(() => {
     if (event) {
       setTitle(event.title || '');
       setDescription(event.description || '');
