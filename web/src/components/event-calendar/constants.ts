@@ -1,3 +1,5 @@
+import type { EventColor } from './types';
+
 export const EventHeight = 24;
 
 // Vertical gap between events in pixels - controls spacing in month view
@@ -16,3 +18,36 @@ export const EndHour = 20; // End at 8 PM
 // Default start and end times
 export const DefaultStartHour = 9; // 9 AM
 export const DefaultEndHour = 10; // 10 AM
+
+export const etiquettes = [
+  {
+    id: 'my-events',
+    name: 'My Events',
+    color: 'emerald' as EventColor,
+    isActive: true,
+  },
+  {
+    id: 'marketing-team',
+    name: 'Marketing Team',
+    color: 'orange' as EventColor,
+    isActive: true,
+  },
+  {
+    id: 'interviews',
+    name: 'Interviews',
+    color: 'violet' as EventColor,
+    isActive: true,
+  },
+  {
+    id: 'events-planning',
+    name: 'Events Planning',
+    color: 'blue' as EventColor,
+    isActive: true,
+  },
+  {
+    id: 'holidays',
+    name: 'Holidays',
+    color: 'rose' as EventColor,
+    isActive: true,
+  },
+];

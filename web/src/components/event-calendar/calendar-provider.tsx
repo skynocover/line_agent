@@ -1,9 +1,7 @@
-"use client";
-
-import { useState } from "react";
-import type { ReactNode } from "react";
-import { etiquettes } from "@/components/big-calendar";
-import { CalendarContext } from "@/components/event-calendar/calendar-context";
+import { useState } from 'react';
+import type { ReactNode } from 'react';
+import { etiquettes } from '@/components/event-calendar/constants';
+import { CalendarContext } from '@/components/event-calendar/calendar-context';
 
 interface CalendarProviderProps {
   children: ReactNode;
@@ -15,9 +13,7 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
   // Initialize visibleColors based on the isActive property in etiquettes
   const [visibleColors, setVisibleColors] = useState<string[]>(() => {
     // Filter etiquettes to get only those that are active
-    return etiquettes
-      .filter((etiquette) => etiquette.isActive)
-      .map((etiquette) => etiquette.color);
+    return etiquettes.filter((etiquette) => etiquette.isActive).map((etiquette) => etiquette.color);
   });
 
   // Toggle visibility of a color
@@ -45,9 +41,5 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
     isColorVisible,
   };
 
-  return (
-    <CalendarContext.Provider value={value}>
-      {children}
-    </CalendarContext.Provider>
-  );
+  return <CalendarContext.Provider value={value}>{children}</CalendarContext.Provider>;
 }

@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useMemo } from "react";
+import React, { useMemo } from 'react';
 import {
   addHours,
   areIntervalsOverlapping,
@@ -11,7 +9,7 @@ import {
   getMinutes,
   isSameDay,
   startOfDay,
-} from "date-fns";
+} from 'date-fns';
 
 import {
   DraggableEvent,
@@ -21,9 +19,9 @@ import {
   useCurrentTimeIndicator,
   WeekCellsHeight,
   type CalendarEvent,
-} from "@/components/event-calendar";
-import { StartHour, EndHour } from "@/components/event-calendar/constants";
-import { cn } from "@/lib/utils";
+} from '@/components/event-calendar';
+import { StartHour, EndHour } from '@/components/event-calendar/constants';
+import { cn } from '@/lib/utils';
 
 interface DayViewProps {
   currentDate: Date;
@@ -41,12 +39,7 @@ interface PositionedEvent {
   zIndex: number;
 }
 
-export function DayView({
-  currentDate,
-  events,
-  onEventSelect,
-  onEventCreate,
-}: DayViewProps) {
+export function DayView({ currentDate, events, onEventSelect, onEventCreate }: DayViewProps) {
   const hours = useMemo(() => {
     const dayStart = startOfDay(currentDate);
     return eachHourOfInterval({
@@ -66,9 +59,7 @@ export function DayView({
           (currentDate > eventStart && currentDate < eventEnd)
         );
       })
-      .sort(
-        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-      );
+      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   }, [currentDate, events]);
 
   // Filter all-day events
@@ -117,16 +108,11 @@ export function DayView({
       const eventEnd = new Date(event.end);
 
       // Adjust start and end times if they're outside this day
-      const adjustedStart = isSameDay(currentDate, eventStart)
-        ? eventStart
-        : dayStart;
-      const adjustedEnd = isSameDay(currentDate, eventEnd)
-        ? eventEnd
-        : addHours(dayStart, 24);
+      const adjustedStart = isSameDay(currentDate, eventStart) ? eventStart : dayStart;
+      const adjustedEnd = isSameDay(currentDate, eventEnd) ? eventEnd : addHours(dayStart, 24);
 
       // Calculate top position and height
-      const startHour =
-        getHours(adjustedStart) + getMinutes(adjustedStart) / 60;
+      const startHour = getHours(adjustedStart) + getMinutes(adjustedStart) / 60;
       const endHour = getHours(adjustedEnd) + getMinutes(adjustedEnd) / 60;
       const top = (startHour - StartHour) * WeekCellsHeight;
       const height = (endHour - startHour) * WeekCellsHeight;
@@ -144,8 +130,8 @@ export function DayView({
           const overlaps = col.some((c) =>
             areIntervalsOverlapping(
               { start: adjustedStart, end: adjustedEnd },
-              { start: new Date(c.event.start), end: new Date(c.event.end) }
-            )
+              { start: new Date(c.event.start), end: new Date(c.event.end) },
+            ),
           );
           if (!overlaps) {
             placed = true;
@@ -183,10 +169,7 @@ export function DayView({
   };
 
   const showAllDaySection = allDayEvents.length > 0;
-  const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(
-    currentDate,
-    "day"
-  );
+  const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(currentDate, 'day');
 
   return (
     <div data-slot="day-view" className="contents">
@@ -233,7 +216,7 @@ export function DayView({
             >
               {index > 0 && (
                 <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-16 max-w-full items-center justify-end pe-2 text-[10px] sm:pe-4 sm:text-xs">
-                  {format(hour, "h a")}
+                  {format(hour, 'h a')}
                 </span>
               )}
             </div>
@@ -297,14 +280,11 @@ export function DayView({
                       date={currentDate}
                       time={quarterHourTime}
                       className={cn(
-                        "absolute h-[calc(var(--week-cells-height)/4)] w-full",
-                        quarter === 0 && "top-0",
-                        quarter === 1 &&
-                          "top-[calc(var(--week-cells-height)/4)]",
-                        quarter === 2 &&
-                          "top-[calc(var(--week-cells-height)/4*2)]",
-                        quarter === 3 &&
-                          "top-[calc(var(--week-cells-height)/4*3)]"
+                        'absolute h-[calc(var(--week-cells-height)/4)] w-full',
+                        quarter === 0 && 'top-0',
+                        quarter === 1 && 'top-[calc(var(--week-cells-height)/4)]',
+                        quarter === 2 && 'top-[calc(var(--week-cells-height)/4*2)]',
+                        quarter === 3 && 'top-[calc(var(--week-cells-height)/4*3)]',
                       )}
                       onClick={() => {
                         const startTime = new Date(currentDate);

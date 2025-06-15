@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { TODO } from '@/features/todo/TODO';
 import type { EditValues } from '@/features/todo/TODO';
 import type { CalendarEvent } from '@/components/event-calendar/types';
+import { EventCalendar } from '@/components/event-calendar';
+import { CalendarProvider } from '@/components/event-calendar/calendar-provider';
 
 // Mock data
 const mockTodos: CalendarEvent[] = [
@@ -142,30 +144,33 @@ function RouteComponent() {
 
   return (
     <div className="container mx-auto py-4 space-y-3">
-      {sortedDates.map((date) => (
-        <div key={date} className="space-y-2 border-b">
-          <h2 className="text-lg font-semibold text-left ml-2">
-            {format(new Date(date), 'yyyy年MM月dd日')}
-          </h2>
-          <div className="space-y-0">
-            {groupedTodos[date].map((todo) => (
-              <TODO
-                key={todo.id}
-                todo={todo}
-                editingTodo={editingTodo}
-                editValues={editValues}
-                expandedTodos={expandedTodos}
-                handleTodoToggle={handleTodoToggle}
-                startEditing={startEditing}
-                saveEdit={saveEdit}
-                cancelEdit={cancelEdit}
-                setEditValues={setEditValues}
-                form={form}
-              />
-            ))}
+      <CalendarProvider>
+        <EventCalendar events={todos} />
+        {sortedDates.map((date) => (
+          <div key={date} className="space-y-2 border-b">
+            <h2 className="text-lg font-semibold text-left ml-2">
+              {format(new Date(date), 'yyyy年MM月dd日')}
+            </h2>
+            <div className="space-y-0">
+              {groupedTodos[date].map((todo) => (
+                <TODO
+                  key={todo.id}
+                  todo={todo}
+                  editingTodo={editingTodo}
+                  editValues={editValues}
+                  expandedTodos={expandedTodos}
+                  handleTodoToggle={handleTodoToggle}
+                  startEditing={startEditing}
+                  saveEdit={saveEdit}
+                  cancelEdit={cancelEdit}
+                  setEditValues={setEditValues}
+                  form={form}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </CalendarProvider>
     </div>
   );
 }
