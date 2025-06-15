@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { createFileRoute } from '@tanstack/react-router';
 
@@ -65,68 +65,80 @@ function RouteComponent() {
     },
   });
 
-  // Group todos by date
-  const groupedTodos = todos.reduce((groups, todo) => {
-    const date = todo.start.toISOString().split('T')[0];
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(todo);
-    return groups;
-  }, {} as { [key: string]: CalendarEvent[] });
+  // Memoize grouped todos to prevent unnecessary recalculations
+  const { groupedTodos, sortedDates } = useMemo(() => {
+    const groups = todos.reduce((groups, todo) => {
+      const date = todo.start.toISOString().split('T')[0];
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(todo);
+      return groups;
+    }, {} as { [key: string]: CalendarEvent[] });
 
-  // Sort dates
-  const sortedDates = Object.keys(groupedTodos).sort();
+    return {
+      groupedTodos: groups,
+      sortedDates: Object.keys(groups).sort(),
+    };
+  }, [todos]);
 
-  const handleTodoToggle = (todoId: number) => {
-    setTodos(
-      todos.map((todo) => (todo.id === todoId ? { ...todo, completed: !todo.completed } : todo)),
+  const handleTodoToggle = useCallback((todoId: number) => {
+    setTodos((prevTodos) =>
+      prevTodos.map((todo) =>
+        todo.id === todoId ? { ...todo, completed: !todo.completed } : todo,
+      ),
     );
-  };
+  }, []);
 
-  const startEditing = (todoId: number) => {
-    const todo = todos.find((t) => t.id === todoId);
-    if (!todo) return;
-    setEditingTodo({ id: todoId, field: 'title' });
-    setEditValues({
-      title: todo.title,
-      description: todo.description,
-      start: todo.start,
-      end: todo.end,
-      allDay: todo.allDay,
-    });
-    setExpandedTodos(new Set([...expandedTodos, todoId]));
-  };
+  const startEditing = useCallback(
+    (todoId: number) => {
+      const todo = todos.find((t) => t.id === todoId);
+      if (!todo) return;
+      setEditingTodo({ id: todoId, field: 'title' });
+      setEditValues({
+        title: todo.title,
+        description: todo.description,
+        start: todo.start,
+        end: todo.end,
+        allDay: todo.allDay,
+      });
+      setExpandedTodos((prev) => new Set([...prev, todoId]));
+    },
+    [todos],
+  );
 
-  const saveEdit = (todoId: number) => {
-    if (!editingTodo) return;
+  const saveEdit = useCallback(
+    (todoId: number) => {
+      if (!editingTodo) return;
 
-    setTodos(
-      todos.map((todo) => {
-        if (todo.id === todoId) {
-          return {
-            ...todo,
-            title: editValues.title as string,
-            description: editValues.description as string,
-            start: editValues.start as Date,
-            end: editValues.end as Date,
-            allDay: editValues.allDay as boolean,
-          };
-        }
-        return todo;
-      }),
-    );
+      setTodos((prevTodos) =>
+        prevTodos.map((todo) => {
+          if (todo.id === todoId) {
+            return {
+              ...todo,
+              title: editValues.title as string,
+              description: editValues.description as string,
+              start: editValues.start as Date,
+              end: editValues.end as Date,
+              allDay: editValues.allDay as boolean,
+            };
+          }
+          return todo;
+        }),
+      );
 
+      setEditingTodo(null);
+      setEditValues({});
+      setExpandedTodos((prev) => new Set([...prev].filter((id) => id !== todoId)));
+    },
+    [editingTodo, editValues],
+  );
+
+  const cancelEdit = useCallback(() => {
     setEditingTodo(null);
     setEditValues({});
-    setExpandedTodos(new Set([...expandedTodos].filter((id) => id !== todoId)));
-  };
-
-  const cancelEdit = () => {
-    setEditingTodo(null);
-    setEditValues({});
-    setExpandedTodos(new Set([...expandedTodos].filter((id) => id !== editingTodo?.id)));
-  };
+    setExpandedTodos((prev) => new Set([...prev].filter((id) => id !== editingTodo?.id)));
+  }, [editingTodo]);
 
   return (
     <div className="container mx-auto py-4 space-y-3">

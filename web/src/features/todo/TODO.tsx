@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { Pencil, Check, X, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -24,18 +25,7 @@ export type EditValues = {
 
 export type EditingTodo = { id: number; field: keyof CalendarEvent };
 
-export const TODO = ({
-  todo,
-  editingTodo,
-  editValues,
-  expandedTodos,
-  handleTodoToggle,
-  startEditing,
-  saveEdit,
-  cancelEdit,
-  setEditValues,
-  form,
-}: {
+interface TODOProps {
   todo: CalendarEvent;
   editingTodo: EditingTodo | null;
   editValues: Partial<EditValues>;
@@ -46,9 +36,204 @@ export const TODO = ({
   cancelEdit: () => void;
   setEditValues: React.Dispatch<React.SetStateAction<Partial<EditValues>>>;
   form: UseFormReturn<{ isAllDay: boolean }, any, { isAllDay: boolean }>;
-}) => {
-  return (
-    <>
+}
+
+const TodoTitle = memo(
+  ({
+    todo,
+    editingTodo,
+    editValues,
+    setEditValues,
+    saveEdit,
+    cancelEdit,
+    startEditing,
+  }: {
+    todo: CalendarEvent;
+    editingTodo: EditingTodo | null;
+    editValues: Partial<EditValues>;
+    setEditValues: React.Dispatch<React.SetStateAction<Partial<EditValues>>>;
+    saveEdit: (todoId: number) => void;
+    cancelEdit: () => void;
+    startEditing: (todoId: number) => void;
+  }) => {
+    if (editingTodo?.id === todo.id) {
+      return (
+        <div className="flex items-center gap-2 flex-1">
+          <Input
+            value={editValues.title}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEditValues({ ...editValues, title: e.target.value })
+            }
+            className="flex-1"
+          />
+          <Button size="sm" onClick={() => saveEdit(todo.id)}>
+            <Check className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={cancelEdit}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 flex-1">
+          <div className={`text-lg ${todo.completed ? 'line-through' : ''}`}>{todo.title}</div>
+          <div className={`text-sm text-muted-foreground ${todo.completed ? 'line-through' : ''}`}>
+            {todo.allDay ? '全天' : `${format(todo.start, 'HH:mm')} - ${format(todo.end, 'HH:mm')}`}
+          </div>
+          <Button variant="ghost" size="sm" className="ml-2" onClick={() => startEditing(todo.id)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  },
+);
+
+TodoTitle.displayName = 'TodoTitle';
+
+const TodoDetails = memo(
+  ({
+    todo,
+    editingTodo,
+    editValues,
+    setEditValues,
+    form,
+  }: {
+    todo: CalendarEvent;
+    editingTodo: EditingTodo | null;
+    editValues: Partial<EditValues>;
+    setEditValues: React.Dispatch<React.SetStateAction<Partial<EditValues>>>;
+    form: UseFormReturn<{ isAllDay: boolean }, any, { isAllDay: boolean }>;
+  }) => {
+    const handleDateSelect = useCallback(
+      (date: Date | undefined) => {
+        if (date && editingTodo?.id === todo.id) {
+          const formattedDate = format(date, 'yyyy-MM-dd');
+          setEditValues({ ...editValues, start: new Date(formattedDate) });
+        }
+      },
+      [editingTodo?.id, todo.id, editValues, setEditValues],
+    );
+
+    const handleAllDayChange = useCallback(
+      (checked: boolean) => {
+        form.setValue('isAllDay', checked);
+        if (editingTodo?.id === todo.id) {
+          setEditValues({ ...editValues, allDay: checked });
+        }
+      },
+      [editingTodo?.id, todo.id, editValues, form, setEditValues],
+    );
+
+    const handleDateTimeChange = useCallback(
+      (start: string, end: string) => {
+        if (editingTodo?.id === todo.id) {
+          setEditValues({ ...editValues, start: new Date(start), end: new Date(end) });
+        }
+      },
+      [editingTodo?.id, todo.id, editValues, setEditValues],
+    );
+
+    return (
+      <div className="mt-2 space-y-1 ml-6">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {editingTodo?.id === todo.id
+                    ? format(new Date(editValues.start || ''), 'yyyy-MM-dd')
+                    : format(new Date(todo.start), 'yyyy-MM-dd')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <CalendarComponent
+                  mode="single"
+                  selected={
+                    editingTodo?.id === todo.id
+                      ? new Date(editValues.start || '')
+                      : new Date(todo.start)
+                  }
+                  onSelect={handleDateSelect}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <Form {...form}>
+              <FormField
+                control={form.control}
+                name="isAllDay"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-y-0">
+                    <FormLabel>全天</FormLabel>
+                    <FormControl>
+                      <Switch
+                        checked={
+                          editingTodo?.id === todo.id ? (editValues.allDay as boolean) : todo.allDay
+                        }
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked);
+                          handleAllDayChange(checked);
+                        }}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </Form>
+          </div>
+        </div>
+
+        {!(editingTodo?.id === todo.id ? editValues.allDay : todo.allDay) && (
+          <DateTimePicker
+            initialStartTime={(editingTodo?.id === todo.id
+              ? editValues.start
+              : todo.start
+            )?.toString()}
+            initialEndTime={(editingTodo?.id === todo.id ? editValues.end : todo.end)?.toString()}
+            onDateTimeChange={handleDateTimeChange}
+            className="flex-1"
+          />
+        )}
+
+        {editingTodo?.id === todo.id ? (
+          <div className="flex items-center gap-2">
+            <Textarea
+              value={editValues.description}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                setEditValues({ ...editValues, description: e.target.value })
+              }
+              className="flex-1"
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{todo.description}</p>
+        )}
+      </div>
+    );
+  },
+);
+
+TodoDetails.displayName = 'TodoDetails';
+
+export const TODO = memo(
+  ({
+    todo,
+    editingTodo,
+    editValues,
+    expandedTodos,
+    handleTodoToggle,
+    startEditing,
+    saveEdit,
+    cancelEdit,
+    setEditValues,
+    form,
+  }: TODOProps) => {
+    return (
       <div key={todo.id} className="px-3 pb-2">
         <div className="flex flex-row items-center space-y-0">
           <Checkbox
@@ -56,148 +241,32 @@ export const TODO = ({
             onCheckedChange={() => handleTodoToggle(todo.id)}
             className="mr-2"
           />
-          {editingTodo?.id === todo.id ? (
-            <div className="flex items-center gap-2 flex-1">
-              <Input
-                value={editValues.title}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setEditValues({ ...editValues, title: e.target.value })
-                }
-                className="flex-1"
-              />
-              <Button size="sm" onClick={() => saveEdit(todo.id)}>
-                <Check className="h-4 w-4" />
-              </Button>
-              <Button size="sm" variant="ghost" onClick={cancelEdit}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 flex-1">
-                <div className={`text-lg ${todo.completed ? 'line-through' : ''}`}>
-                  {todo.title}
-                </div>
-                <div
-                  className={`text-sm text-muted-foreground ${
-                    todo.completed ? 'line-through' : ''
-                  }`}
-                >
-                  {todo.allDay ? '全天' : `${todo.start} - ${todo.end}`}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="ml-2"
-                  onClick={() => startEditing(todo.id)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          <TodoTitle
+            todo={todo}
+            editingTodo={editingTodo}
+            editValues={editValues}
+            setEditValues={setEditValues}
+            saveEdit={saveEdit}
+            cancelEdit={cancelEdit}
+            startEditing={startEditing}
+          />
         </div>
 
         {!expandedTodos.has(todo.id) && todo.description && !todo.completed && (
           <div className="text-sm text-muted-foreground line-clamp-1 ml-6">{todo.description}</div>
         )}
         {!todo.completed && expandedTodos.has(todo.id) && (
-          <div className="mt-2 space-y-1 ml-6">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-4">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {editingTodo?.id === todo.id
-                        ? format(new Date(editValues.start || ''), 'yyyy-MM-dd')
-                        : format(new Date(todo.start), 'yyyy-MM-dd')}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={
-                        editingTodo?.id === todo.id
-                          ? new Date(editValues.start || '')
-                          : new Date(todo.start)
-                      }
-                      onSelect={(date) => {
-                        if (date) {
-                          const formattedDate = format(date, 'yyyy-MM-dd');
-                          if (editingTodo?.id === todo.id) {
-                            setEditValues({ ...editValues, start: new Date(formattedDate) });
-                          }
-                        }
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <Form {...form}>
-                  <FormField
-                    control={form.control}
-                    name="isAllDay"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-y-0">
-                        <FormLabel>全天</FormLabel>
-                        <FormControl>
-                          <Switch
-                            checked={
-                              editingTodo?.id === todo.id
-                                ? (editValues.allDay as boolean)
-                                : todo.allDay
-                            }
-                            onCheckedChange={(checked) => {
-                              field.onChange(checked);
-                              if (editingTodo?.id === todo.id) {
-                                setEditValues({ ...editValues, allDay: checked });
-                              }
-                            }}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </Form>
-              </div>
-            </div>
-
-            {!(editingTodo?.id === todo.id ? editValues.allDay : todo.allDay) && (
-              <DateTimePicker
-                initialStartTime={(editingTodo?.id === todo.id
-                  ? editValues.start
-                  : todo.start
-                )?.toString()}
-                initialEndTime={(editingTodo?.id === todo.id
-                  ? editValues.end
-                  : todo.end
-                )?.toString()}
-                onDateTimeChange={(start, end) => {
-                  if (editingTodo?.id === todo.id) {
-                    setEditValues({ ...editValues, start: new Date(start), end: new Date(end) });
-                  }
-                }}
-                className="flex-1"
-              />
-            )}
-
-            {editingTodo?.id === todo.id ? (
-              <div className="flex items-center gap-2">
-                <Textarea
-                  value={editValues.description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setEditValues({ ...editValues, description: e.target.value })
-                  }
-                  className="flex-1"
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">{todo.description}</p>
-            )}
-          </div>
+          <TodoDetails
+            todo={todo}
+            editingTodo={editingTodo}
+            editValues={editValues}
+            setEditValues={setEditValues}
+            form={form}
+          />
         )}
       </div>
-    </>
-  );
-};
+    );
+  },
+);
+
+TODO.displayName = 'TODO';
