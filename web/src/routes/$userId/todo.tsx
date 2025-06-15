@@ -92,22 +92,17 @@ function RouteComponent() {
     );
   }, []);
 
-  const startEditing = useCallback(
-    (todoId: number) => {
-      const todo = todos.find((t) => t.id === todoId);
-      if (!todo) return;
-      setEditingTodo({ id: todoId, field: 'title' });
-      setEditValues({
-        title: todo.title,
-        description: todo.description,
-        start: todo.start,
-        end: todo.end,
-        allDay: todo.allDay,
-      });
-      setExpandedTodos((prev) => new Set([...prev, todoId]));
-    },
-    [todos],
-  );
+  const handleEventAdd = useCallback((event: CalendarEvent) => {
+    setTodos((prevTodos) => [...prevTodos, event]);
+  }, []);
+
+  const handleEventUpdate = useCallback((event: CalendarEvent) => {
+    setTodos((prevTodos) => prevTodos.map((todo) => (todo.id === event.id ? event : todo)));
+  }, []);
+
+  const handleEventDelete = useCallback((eventId: number) => {
+    setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== eventId));
+  }, []);
 
   const saveEdit = useCallback(
     (todoId: number) => {
@@ -136,6 +131,28 @@ function RouteComponent() {
     [editingTodo, editValues],
   );
 
+  const startEditing = useCallback(
+    (todoId: number) => {
+      // If there's a todo being edited, save its changes first
+      if (editingTodo) {
+        saveEdit(editingTodo.id);
+      }
+
+      const todo = todos.find((t) => t.id === todoId);
+      if (!todo) return;
+      setEditingTodo({ id: todoId, field: 'title' });
+      setEditValues({
+        title: todo.title,
+        description: todo.description,
+        start: todo.start,
+        end: todo.end,
+        allDay: todo.allDay,
+      });
+      setExpandedTodos((prev) => new Set([...prev, todoId]));
+    },
+    [todos, editingTodo, saveEdit],
+  );
+
   const cancelEdit = useCallback(() => {
     setEditingTodo(null);
     setEditValues({});
@@ -145,7 +162,12 @@ function RouteComponent() {
   return (
     <div className="container mx-auto py-4 space-y-3">
       <CalendarProvider>
-        <EventCalendar events={todos} />
+        <EventCalendar
+          events={todos}
+          onEventAdd={handleEventAdd}
+          onEventUpdate={handleEventUpdate}
+          onEventDelete={handleEventDelete}
+        />
         {sortedDates.map((date) => (
           <div key={date} className="space-y-2 border-b">
             <h2 className="text-lg font-semibold text-left ml-2">
