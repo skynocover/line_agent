@@ -213,6 +213,13 @@ export function EventCalendar({
     });
   };
 
+  const handleToggleComplete = (eventId: number) => {
+    onEventUpdate?.({
+      ...events.find((e) => e.id === eventId)!,
+      completed: !events.find((e) => e.id === eventId)!.completed,
+    });
+  };
+
   const viewTitle = useMemo(() => {
     if (view === 'month') {
       return format(currentDate, 'MMMM yyyy');
@@ -372,6 +379,7 @@ export function EventCalendar({
               currentDate={currentDate}
               events={events}
               onEventSelect={handleEventSelect}
+              onToggleComplete={handleToggleComplete}
             />
           )}
         </div>

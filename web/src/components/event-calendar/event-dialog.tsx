@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RiCalendarLine, RiDeleteBinLine } from '@remixicon/react';
+import { RiCalendarLine, RiDeleteBinLine, RiCheckLine, RiCloseLine } from '@remixicon/react';
 import { format, isBefore } from 'date-fns';
 
 import type { CalendarEvent, EventColor } from '@/components/event-calendar';
@@ -396,7 +396,6 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
             <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
           </div> */}
           <fieldset className="space-y-4">
-            <legend className="text-foreground text-sm leading-none font-medium">Etiquette</legend>
             <RadioGroup
               className="flex gap-1.5"
               defaultValue={colorOptions[0]?.value}
@@ -428,10 +427,12 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
             </Button>
           )}
           <div className="flex flex-1 justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
+            <Button variant="outline" size="icon" onClick={onClose} aria-label="Cancel">
+              <RiCloseLine size={16} aria-hidden="true" />
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button size="icon" onClick={handleSave} aria-label="Save">
+              <RiCheckLine size={16} aria-hidden="true" />
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>

@@ -9,9 +9,15 @@ interface AgendaViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   onEventSelect: (event: CalendarEvent) => void;
+  onToggleComplete?: (eventId: number) => void;
 }
 
-export function AgendaView({ currentDate, events, onEventSelect }: AgendaViewProps) {
+export function AgendaView({
+  currentDate,
+  events,
+  onEventSelect,
+  onToggleComplete,
+}: AgendaViewProps) {
   // Show events for the next days based on constant
   const days = useMemo(() => {
     console.log('Agenda view updating with date:', currentDate.toISOString());
@@ -58,6 +64,7 @@ export function AgendaView({ currentDate, events, onEventSelect }: AgendaViewPro
                     event={event}
                     view="agenda"
                     onClick={(e) => handleEventClick(event, e)}
+                    onToggleComplete={onToggleComplete}
                   />
                 ))}
               </div>

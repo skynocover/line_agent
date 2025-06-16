@@ -82,6 +82,7 @@ interface EventItemProps {
   dndAttributes?: DraggableAttributes;
   onMouseDown?: (e: React.MouseEvent) => void;
   onTouchStart?: (e: React.TouchEvent) => void;
+  onToggleComplete?: (eventId: number) => void;
 }
 
 export function EventItem({
@@ -99,6 +100,7 @@ export function EventItem({
   dndAttributes,
   onMouseDown,
   onTouchStart,
+  onToggleComplete,
 }: EventItemProps) {
   const eventColor = event.color;
 
@@ -221,24 +223,35 @@ export function EventItem({
       {...dndListeners}
       {...dndAttributes}
     >
-      <div className="text-sm font-medium">{event.title}</div>
-      <div className="text-xs opacity-70">
-        {event.allDay ? (
-          <span>All day</span>
-        ) : (
-          <span className="uppercase">
-            {formatTimeWithOptionalMinutes(displayStart)} -{' '}
-            {formatTimeWithOptionalMinutes(displayEnd)}
-          </span>
+      <div className="flex items-center gap-2">
+        {onToggleComplete && (
+          <input
+            type="checkbox"
+            checked={event.completed}
+            onChange={(e) => {
+              e.stopPropagation();
+              onToggleComplete(event.id);
+            }}
+            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            onClick={(e) => e.stopPropagation()}
+          />
         )}
-        {event.location && (
-          <>
-            <span className="px-1 opacity-35"> · </span>
-            <span>{event.location}</span>
-          </>
-        )}
+        <div className="text-sm font-medium">{event.title}</div>
+        <div className="text-xs opacity-70">
+          {event.allDay ? (
+            <span>All day</span>
+          ) : (
+            <span className="uppercase">
+              {formatTimeWithOptionalMinutes(displayStart)} -{' '}
+              {formatTimeWithOptionalMinutes(displayEnd)}
+            </span>
+          )}
+        </div>
       </div>
-      {event.description && <div className="my-1 text-xs opacity-90">{event.description}</div>}
+
+      {event.description && !event.completed && (
+        <div className="my-1 text-xs opacity-90">{event.description}</div>
+      )}
     </button>
   );
 }
