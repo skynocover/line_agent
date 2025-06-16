@@ -24,4 +24,25 @@ export const users = sqliteTable('users', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
+// 定義行事曆事件表
+export const calendarEvents = sqliteTable(
+  'calendar_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    title: text('title').notNull(),
+    description: text('description'),
+    start: text('start').notNull(),
+    end: text('end').notNull(),
+    allDay: integer('all_day', { mode: 'boolean' }).default(false),
+    color: text('color'),
+    label: text('label'),
+    location: text('location'),
+    completed: integer('completed', { mode: 'boolean' }).default(false),
+    userId: text('user_id').notNull(),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index('user_events_idx').on(table.userId)],
+);
+
 export type Newfile = typeof files.$inferInsert;
+export type NewCalendarEvent = typeof calendarEvents.$inferInsert;
