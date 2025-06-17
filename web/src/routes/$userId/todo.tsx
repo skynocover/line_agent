@@ -67,9 +67,10 @@ function RouteComponent() {
         startTime,
         endTime,
       });
-      setTodos(response.events);
+      setTodos(response.data || []);
     } catch (error) {
       console.error('Error fetching events:', error);
+      setTodos([]);
     } finally {
       setLoading(false);
     }
@@ -82,7 +83,13 @@ function RouteComponent() {
   const handleEventAdd = useCallback(
     async (event: CalendarEvent) => {
       try {
-        const newEvent = await createEvent(userId, event);
+        const newEvent = await createEvent(userId, {
+          ...event,
+          id: undefined,
+          userId,
+          start: event.start.toISOString(),
+          end: event.end.toISOString(),
+        });
         setTodos((prevTodos) => [...prevTodos, newEvent]);
       } catch (error) {
         console.error('Error creating event:', error);

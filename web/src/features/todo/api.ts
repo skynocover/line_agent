@@ -1,5 +1,6 @@
 import type { CalendarEvent } from '@/components/event-calendar/types';
 import axios from 'axios';
+import type { NewCalendarEvent } from '../../../../app/db/schema';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL + '/api';
 
@@ -11,7 +12,7 @@ export interface GetEventsParams {
 }
 
 export interface GetEventsResponse {
-  events: CalendarEvent[];
+  data: CalendarEvent[];
   pagination: {
     total: number;
     totalPages: number;
@@ -24,7 +25,7 @@ export const getEvents = async (
   params?: GetEventsParams,
 ): Promise<GetEventsResponse> => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/${userId}/events`, {
+    const { data } = await axios.get(`${API_BASE_URL}/${userId}/events`, {
       params: {
         page: params?.page,
         limit: params?.limit,
@@ -32,7 +33,7 @@ export const getEvents = async (
         endTime: params?.endTime,
       },
     });
-    return response.data;
+    return data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.data) {
       throw new Error(error.response.data.error);
@@ -43,7 +44,7 @@ export const getEvents = async (
 
 export const createEvent = async (
   userId: string,
-  event: Omit<CalendarEvent, 'id'>,
+  event: NewCalendarEvent,
 ): Promise<CalendarEvent> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/${userId}/events`, event, {

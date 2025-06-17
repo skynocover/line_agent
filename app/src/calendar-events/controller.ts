@@ -79,6 +79,7 @@ export class CalendarEventController {
   }
 
   async createEvent(eventData: NewCalendarEvent): Promise<typeof calendarEvents.$inferSelect> {
+    console.log('eventData', eventData);
     const [event] = await this.db.insert(calendarEvents).values(eventData).returning();
     return event;
   }
