@@ -47,6 +47,7 @@ export interface EventCalendarProps {
   onEventDelete?: (eventId: number) => void;
   className?: string;
   initialView?: CalendarView;
+  loading?: boolean;
 }
 
 export function EventCalendar({
@@ -56,10 +57,10 @@ export function EventCalendar({
   onEventDelete,
   className,
   initialView = 'month',
+  loading = false,
 }: EventCalendarProps) {
   // Use the shared calendar context instead of local state
-  const { currentDate, setCurrentDate } = useCalendarContext();
-  const [view, setView] = useState<CalendarView>(initialView);
+  const { currentDate, setCurrentDate, view, setView } = useCalendarContext();
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
@@ -98,7 +99,12 @@ export function EventCalendar({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isEventDialogOpen]);
+  }, [isEventDialogOpen, setView]);
+
+  // Set initial view
+  useEffect(() => {
+    setView(initialView);
+  }, [initialView, setView]);
 
   const handlePrevious = () => {
     if (view === 'month') {
@@ -292,6 +298,7 @@ export function EventCalendar({
                   className="max-sm:size-8"
                   onClick={handlePrevious}
                   aria-label="Previous"
+                  disabled={loading}
                 >
                   <ChevronLeftIcon size={16} aria-hidden="true" />
                 </Button>
@@ -301,11 +308,16 @@ export function EventCalendar({
                   className="max-sm:size-8"
                   onClick={handleNext}
                   aria-label="Next"
+                  disabled={loading}
                 >
                   <ChevronRightIcon size={16} aria-hidden="true" />
                 </Button>
               </div>
-              <Button className="max-sm:h-8 max-sm:px-2.5!" onClick={handleToday}>
+              <Button
+                className="max-sm:h-8 max-sm:px-2.5!"
+                onClick={handleToday}
+                disabled={loading}
+              >
                 Today
               </Button>
             </div>
@@ -317,6 +329,7 @@ export function EventCalendar({
                   setSelectedEvent(null); // Ensure we're creating a new event
                   setIsEventDialogOpen(true);
                 }}
+                disabled={loading}
               >
                 New Event
               </Button>
@@ -325,22 +338,23 @@ export function EventCalendar({
                   <Button
                     variant="outline"
                     className="gap-1.5 max-sm:h-8 max-sm:px-2! max-sm:gap-1"
+                    disabled={loading}
                   >
                     <span className="capitalize">{view}</span>
                     <ChevronDownIcon className="-me-1 opacity-60" size={16} aria-hidden="true" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-32">
-                  <DropdownMenuItem onClick={() => setView('month')}>
+                  <DropdownMenuItem onClick={() => setView('month')} disabled={loading}>
                     Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setView('week')}>
+                  <DropdownMenuItem onClick={() => setView('week')} disabled={loading}>
                     Week <DropdownMenuShortcut>W</DropdownMenuShortcut>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setView('day')}>
+                  <DropdownMenuItem onClick={() => setView('day')} disabled={loading}>
                     Day <DropdownMenuShortcut>D</DropdownMenuShortcut>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setView('agenda')}>
+                  <DropdownMenuItem onClick={() => setView('agenda')} disabled={loading}>
                     Agenda <DropdownMenuShortcut>A</DropdownMenuShortcut>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -350,6 +364,11 @@ export function EventCalendar({
         </div>
 
         <div className="flex flex-1 flex-col">
+          {loading && (
+            <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-50">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          )}
           {view === 'month' && (
             <MonthView
               currentDate={currentDate}

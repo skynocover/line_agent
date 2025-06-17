@@ -9,6 +9,7 @@ import { useAuthStore } from '@/features/auth/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { CalendarProvider } from '@/components/event-calendar/calendar-provider';
 
 const RootComponent = () => {
   const { checkAuth, profile, isAuthenticated, logout } = useAuthStore();
@@ -100,7 +101,9 @@ const RootComponent = () => {
       </header>
 
       <main className="py-2">
-        <Outlet />
+        <CalendarProvider>
+          <Outlet />
+        </CalendarProvider>
       </main>
       <TanStackRouterDevtools />
     </div>

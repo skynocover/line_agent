@@ -2,13 +2,16 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { etiquettes } from '@/components/event-calendar/constants';
 import { CalendarContext } from '@/components/event-calendar/calendar-context';
+import type { CalendarView } from '@/components/event-calendar/types';
 
 interface CalendarProviderProps {
   children: ReactNode;
+  initialView?: CalendarView;
 }
 
-export function CalendarProvider({ children }: CalendarProviderProps) {
+export function CalendarProvider({ children, initialView = 'month' }: CalendarProviderProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [view, setView] = useState<CalendarView>(initialView);
 
   // Initialize visibleColors based on the isActive property in etiquettes
   const [visibleColors, setVisibleColors] = useState<string[]>(() => {
@@ -36,6 +39,8 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
   const value = {
     currentDate,
     setCurrentDate,
+    view,
+    setView,
     visibleColors,
     toggleColorVisibility,
     isColorVisible,

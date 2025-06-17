@@ -1,9 +1,12 @@
 import { createContext, useContext } from 'react';
+import type { CalendarView } from './types';
 
 interface CalendarContextType {
   // Date management
   currentDate: Date;
   setCurrentDate: (date: Date) => void;
+  view: CalendarView;
+  setView: (view: CalendarView) => void;
 
   // Etiquette visibility management
   visibleColors: string[];

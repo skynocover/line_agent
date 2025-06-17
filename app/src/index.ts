@@ -9,6 +9,7 @@ import { type Newfile } from '../db/schema';
 import type { Database } from '../db';
 import filesRoutes from './files/routes';
 import { FileController } from './files/controller';
+import calendarEvents from './calendar-events/routes';
 
 export type Bindings = {
   APP_STORAGE: R2Bucket;
@@ -35,6 +36,7 @@ app.get('/', (c) => {
 
 // Mount file routes
 app.route('/api', filesRoutes);
+app.route('/api', calendarEvents);
 
 app.get('/:userId/:fileId', async (c) => {
   if (c.env.ENV !== 'local') {
