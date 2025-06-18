@@ -17,7 +17,6 @@ import {
   Copy,
 } from 'lucide-react';
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
@@ -32,7 +31,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getFiles, deleteFile, updateFileName } from '@/features/files/api';
 import {
   Dialog,
   DialogContent,
@@ -50,6 +48,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useFiles } from '@/features/files/hooks';
 
 // 根據檔案類型返回對應圖示
 const getFileIcon = (category: string) => {
@@ -146,7 +145,6 @@ const FilesPage = () => {
     null,
   );
   const [newFileName, setNewFileName] = useState('');
-  const queryClient = useQueryClient();
 
   // Add debounce effect
   useEffect(() => {
@@ -159,28 +157,13 @@ const FilesPage = () => {
     return () => clearTimeout(timer);
   }, [searchTerm, isComposing]);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['files', userId, page, sort, order, debouncedSearchTerm],
-    queryFn: () =>
-      getFiles(userId, { page, limit: pageSize, sort, order, filter: debouncedSearchTerm }),
-  });
-
-  const deleteFileMutation = useMutation({
-    mutationFn: ({ fileId }: { fileId: string }) => deleteFile(userId, fileId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['files', userId] });
-      setDeletingFile(null);
-    },
-  });
-
-  const updateFileNameMutation = useMutation({
-    mutationFn: ({ fileId, fileName }: { fileId: string; fileName: string }) =>
-      updateFileName(userId, fileId, fileName),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['files', userId] });
-      setEditingFile(null);
-      setNewFileName('');
-    },
+  const { files, pagination, isLoading, error, handleFileDelete, handleFileNameUpdate } = useFiles({
+    userId,
+    page,
+    limit: pageSize,
+    sort,
+    order,
+    filter: debouncedSearchTerm,
   });
 
   const handleSortChange = (newSort: 'name' | 'type' | 'size' | 'date') => {
@@ -212,7 +195,7 @@ const FilesPage = () => {
 
   const handleRenameSubmit = () => {
     if (editingFile && newFileName.trim()) {
-      updateFileNameMutation.mutate({
+      handleFileNameUpdate({
         fileId: editingFile.fileId,
         fileName: newFileName.trim(),
       });
@@ -221,7 +204,7 @@ const FilesPage = () => {
 
   const handleDeleteConfirm = () => {
     if (deletingFile) {
-      deleteFileMutation.mutate({ fileId: deletingFile.fileId });
+      handleFileDelete(deletingFile.fileId);
     }
   };
 
@@ -255,8 +238,6 @@ const FilesPage = () => {
       </div>
     );
   }
-
-  const files = data?.data ?? [];
 
   return (
     <div className="h-[calc(100vh-70px)] bg-gray-50">
@@ -505,7 +486,7 @@ const FilesPage = () => {
           )}
 
           {/* 分頁組件 */}
-          {files.length > 0 && data?.pagination && (
+          {files.length > 0 && pagination && (
             <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200">
               <div className="flex items-center gap-2">
                 <Button
@@ -518,13 +499,13 @@ const FilesPage = () => {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <div className="text-sm text-gray-600">
-                  {page}/{data.pagination.totalPages}
+                  {page}/{pagination.totalPages}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setPage(page + 1)}
-                  disabled={page === data.pagination.totalPages}
+                  disabled={page === pagination.totalPages}
                   className="h-8 w-8"
                 >
                   <ChevronRight className="h-4 w-4" />
