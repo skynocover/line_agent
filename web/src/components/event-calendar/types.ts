@@ -1,7 +1,7 @@
 export type CalendarView = 'month' | 'week' | 'day' | 'agenda';
 
 export interface CalendarEvent {
-  id: number;
+  id?: number;
   title: string;
   description?: string;
   start: Date;
