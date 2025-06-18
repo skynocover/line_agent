@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { createFileRoute, useParams } from '@tanstack/react-router';
 import {
   startOfMonth,
@@ -10,10 +10,9 @@ import {
   addDays,
 } from 'date-fns';
 
-import type { CalendarEvent } from '@/components/event-calendar/types';
 import { EventCalendar } from '@/components/event-calendar';
 import { useCalendarContext } from '@/components/event-calendar/calendar-context';
-import { getEvents, createEvent, updateEvent, deleteEvent } from '@/features/todo/api';
+import { useTodos } from '@/features/todo/hooks';
 
 export const Route = createFileRoute('/$userId/todo')({
   component: RouteComponent,
@@ -21,8 +20,6 @@ export const Route = createFileRoute('/$userId/todo')({
 
 function RouteComponent() {
   const { userId } = useParams({ from: '/$userId/todo' });
-  const [todos, setTodos] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(false);
   const { currentDate, view } = useCalendarContext();
 
   const getTimeRange = useCallback(() => {
@@ -57,72 +54,12 @@ function RouteComponent() {
     };
   }, [currentDate, view]);
 
-  const fetchEvents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { startTime, endTime } = getTimeRange();
-      const response = await getEvents(userId, {
-        page: 1,
-        limit: 50,
-        startTime,
-        endTime,
-      });
-      setTodos(response.data || []);
-    } catch (error) {
-      console.error('Error fetching events:', error);
-      setTodos([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [getTimeRange, userId]);
-
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
-
-  const handleEventAdd = useCallback(
-    async (event: CalendarEvent) => {
-      try {
-        const newEvent = await createEvent(userId, {
-          ...event,
-          id: undefined,
-          userId,
-          start: event.start.toISOString(),
-          end: event.end.toISOString(),
-        });
-        setTodos((prevTodos) => [...prevTodos, newEvent]);
-      } catch (error) {
-        console.error('Error creating event:', error);
-      }
-    },
-    [userId],
-  );
-
-  const handleEventUpdate = useCallback(
-    async (event: CalendarEvent) => {
-      try {
-        const updatedEvent = await updateEvent(userId, event.id, event);
-        setTodos((prevTodos) =>
-          prevTodos.map((todo) => (todo.id === event.id ? updatedEvent : todo)),
-        );
-      } catch (error) {
-        console.error('Error updating event:', error);
-      }
-    },
-    [userId],
-  );
-
-  const handleEventDelete = useCallback(
-    async (eventId: number) => {
-      try {
-        await deleteEvent(userId, eventId);
-        setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== eventId));
-      } catch (error) {
-        console.error('Error deleting event:', error);
-      }
-    },
-    [userId],
-  );
+  const { todos, isLoading, handleEventAdd, handleEventUpdate, handleEventDelete } = useTodos({
+    userId,
+    currentDate,
+    view,
+    getTimeRange,
+  });
 
   return (
     <div className="container mx-auto py-4 space-y-3">
@@ -131,7 +68,7 @@ function RouteComponent() {
         onEventAdd={handleEventAdd}
         onEventUpdate={handleEventUpdate}
         onEventDelete={handleEventDelete}
-        loading={loading}
+        loading={isLoading}
       />
     </div>
   );
