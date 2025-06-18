@@ -28,11 +28,11 @@ export class CalendarEventController {
         }
 
         if (startTime) {
-          conditions.push(gte(events.start, startTime));
+          conditions.push(gte(events.start, new Date(startTime)));
         }
 
         if (endTime) {
-          conditions.push(lte(events.end, endTime));
+          conditions.push(lte(events.end, new Date(endTime)));
         }
 
         return and(...conditions);
@@ -79,8 +79,14 @@ export class CalendarEventController {
   }
 
   async createEvent(eventData: NewCalendarEvent): Promise<typeof calendarEvents.$inferSelect> {
-    console.log('eventData', eventData);
-    const [event] = await this.db.insert(calendarEvents).values(eventData).returning();
+    const [event] = await this.db
+      .insert(calendarEvents)
+      .values({
+        ...eventData,
+        start: new Date(eventData.start || ''),
+        end: new Date(eventData.end || ''),
+      })
+      .returning();
     return event;
   }
 
@@ -96,7 +102,7 @@ export class CalendarEventController {
 
     const [updatedEvent] = await this.db
       .update(calendarEvents)
-      .set(eventData)
+      .set({ ...event, start: new Date(eventData.start || ''), end: new Date(eventData.end || '') })
       .where(eq(calendarEvents.id, eventId))
       .returning();
 

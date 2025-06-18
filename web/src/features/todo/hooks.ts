@@ -41,8 +41,8 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
         ...event,
         id: undefined,
         userId,
-        start: event.start.toISOString(),
-        end: event.end.toISOString(),
+        start: event.start,
+        end: event.end,
       }),
     onSuccess: (newEvent) => {
       queryClient.setQueryData(queryKey, (old: CalendarEvent[] = []) => [...old, newEvent]);
