@@ -107,8 +107,6 @@ export function ExpiredTodoList({
                   <div
                     key={todo.id}
                     className="border rounded-lg p-2 cursor-pointer hover:bg-muted/50 transition-colors"
-                    onDoubleClick={() => handleEventEdit(todo)}
-                    title="雙擊編輯"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div className="flex-1">
@@ -117,10 +115,7 @@ export function ExpiredTodoList({
                           view="agenda"
                           onToggleComplete={handleToggleComplete}
                           showDate={true}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            // Handle edit event if needed
-                          }}
+                          onClick={() => handleEventEdit(todo)}
                         />
                       </div>
                       <div className="flex items-center gap-1 sm:flex-row flex-wrap">
