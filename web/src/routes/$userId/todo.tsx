@@ -91,6 +91,12 @@ function RouteComponent() {
         expiredTodos={incompleteExpiredTodos}
         isLoading={isLoadingIncompleteExpiredTodos}
         onToggleComplete={handleToggleComplete}
+        onEventEdit={(event) => {
+          // The EventCalendar component will handle the event dialog
+          // We can use a ref or create an event to trigger the dialog
+          const editEvent = new CustomEvent('edit-expired-todo', { detail: event });
+          window.dispatchEvent(editEvent);
+        }}
         showDate={true}
       />
 

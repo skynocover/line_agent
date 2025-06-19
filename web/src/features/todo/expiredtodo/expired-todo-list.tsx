@@ -8,6 +8,7 @@ interface ExpiredTodoListProps {
   expiredTodos: CalendarEvent[];
   isLoading: boolean;
   onToggleComplete: (eventId: number) => void;
+  onEventEdit?: (event: CalendarEvent) => void;
   itemsPerPage?: number;
   showDate?: boolean;
 }
@@ -16,6 +17,7 @@ export function ExpiredTodoList({
   expiredTodos,
   isLoading,
   onToggleComplete,
+  onEventEdit,
   itemsPerPage = 5,
   showDate = false,
 }: ExpiredTodoListProps) {
@@ -55,7 +57,12 @@ export function ExpiredTodoList({
         <>
           <div className="space-y-2">
             {paginatedExpiredTodos.map((todo: CalendarEvent) => (
-              <div key={todo.id} className="border rounded-lg p-2">
+              <div
+                key={todo.id}
+                className="border rounded-lg p-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                onDoubleClick={() => onEventEdit?.(todo)}
+                title="雙擊編輯"
+              >
                 <EventItem
                   event={todo}
                   view="agenda"
