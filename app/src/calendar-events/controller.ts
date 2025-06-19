@@ -102,7 +102,11 @@ export class CalendarEventController {
 
     const [updatedEvent] = await this.db
       .update(calendarEvents)
-      .set({ ...event, start: new Date(eventData.start || ''), end: new Date(eventData.end || '') })
+      .set({
+        ...eventData,
+        start: new Date(eventData.start || ''),
+        end: new Date(eventData.end || ''),
+      })
       .where(eq(calendarEvents.id, eventId))
       .returning();
 
