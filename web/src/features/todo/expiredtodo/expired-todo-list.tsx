@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { addDays } from 'date-fns';
 import { EventItem } from '@/components/event-calendar/event-item';
 import { EventDialog } from '@/components/event-calendar/event-dialog';
 import type { CalendarEvent } from '@/components/event-calendar/types';
@@ -42,6 +43,18 @@ export function ExpiredTodoList({
       onToggleComplete(eventId);
     },
     [onToggleComplete],
+  );
+
+  const handlePostpone = useCallback(
+    (todo: CalendarEvent, days: number) => {
+      const updatedTodo = {
+        ...todo,
+        start: addDays(new Date(todo.start), days),
+        end: addDays(new Date(todo.end), days),
+      };
+      onEventUpdate?.(updatedTodo);
+    },
+    [onEventUpdate],
   );
 
   const handleEventEdit = useCallback((event: CalendarEvent) => {
@@ -91,16 +104,55 @@ export function ExpiredTodoList({
                 onDoubleClick={() => handleEventEdit(todo)}
                 title="雙擊編輯"
               >
-                <EventItem
-                  event={todo}
-                  view="agenda"
-                  onToggleComplete={handleToggleComplete}
-                  showDate={showDate}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // Handle edit event if needed
-                  }}
-                />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1">
+                    <EventItem
+                      event={todo}
+                      view="agenda"
+                      onToggleComplete={handleToggleComplete}
+                      showDate={showDate}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        // Handle edit event if needed
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePostpone(todo, 1);
+                      }}
+                      className="text-xs px-2 py-1 h-auto"
+                    >
+                      延後1天
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePostpone(todo, 3);
+                      }}
+                      className="text-xs px-2 py-1 h-auto"
+                    >
+                      延後3天
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePostpone(todo, 7);
+                      }}
+                      className="text-xs px-2 py-1 h-auto"
+                    >
+                      延後1週
+                    </Button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
