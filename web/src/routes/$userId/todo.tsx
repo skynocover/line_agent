@@ -86,23 +86,25 @@ function RouteComponent() {
 
   return (
     <div className="container mx-auto py-4 space-y-6">
-      {/* Expired Incomplete Todos Section */}
-      <ExpiredTodoList
-        expiredTodos={incompleteExpiredTodos}
-        isLoading={isLoadingIncompleteExpiredTodos}
-        onToggleComplete={handleToggleComplete}
-        onEventUpdate={handleEventUpdate}
-        onEventDelete={handleEventDelete}
-      />
+      <div className="max-w-[1200px] mx-auto w-full space-y-6">
+        {/* Expired Incomplete Todos Section */}
+        <ExpiredTodoList
+          expiredTodos={incompleteExpiredTodos}
+          isLoading={isLoadingIncompleteExpiredTodos}
+          onToggleComplete={handleToggleComplete}
+          onEventUpdate={handleEventUpdate}
+          onEventDelete={handleEventDelete}
+        />
 
-      {/* Calendar Section */}
-      <EventCalendar
-        events={todos}
-        onEventAdd={handleEventAdd}
-        onEventUpdate={handleEventUpdate}
-        onEventDelete={handleEventDelete}
-        loading={isLoading}
-      />
+        {/* Calendar Section */}
+        <EventCalendar
+          events={todos}
+          onEventAdd={handleEventAdd}
+          onEventUpdate={handleEventUpdate}
+          onEventDelete={handleEventDelete}
+          loading={isLoading}
+        />
+      </div>
     </div>
   );
 }

@@ -265,7 +265,7 @@ export function EventCalendar({
 
   return (
     <div
-      className="flex has-data-[slot=month-view]:flex-1 flex-col rounded-lg max-w-[1200px] mx-auto w-full"
+      className="flex has-data-[slot=month-view]:flex-1 flex-col rounded-lg w-full"
       style={
         {
           '--event-height': `${EventHeight}px`,
