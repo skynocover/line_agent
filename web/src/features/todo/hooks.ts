@@ -106,7 +106,7 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
         );
       }
     },
-    onError: (error, newEvent, context) => {
+    onError: (error, _, context) => {
       // 錯誤時回滾到之前的狀態
       if (context?.previousTodos) {
         queryClient.setQueryData(queryKey, context.previousTodos);
@@ -159,7 +159,7 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
 
       return { previousTodos, previousExpiredTodos };
     },
-    onError: (error, newEvent, context) => {
+    onError: (error, _, context) => {
       // 錯誤時回滾到之前的狀態
       if (context?.previousTodos) {
         queryClient.setQueryData(queryKey, context.previousTodos);
@@ -196,7 +196,7 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
 
       return { previousTodos, previousExpiredTodos };
     },
-    onError: (error, eventId, context) => {
+    onError: (error, _, context) => {
       // 錯誤時回滾到之前的狀態
       if (context?.previousTodos) {
         queryClient.setQueryData(queryKey, context.previousTodos);
