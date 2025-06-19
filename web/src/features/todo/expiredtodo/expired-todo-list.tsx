@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { EventItem } from '@/components/event-calendar/event-item';
+import { EventDialog } from '@/components/event-calendar/event-dialog';
 import type { CalendarEvent } from '@/components/event-calendar/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -8,7 +9,8 @@ interface ExpiredTodoListProps {
   expiredTodos: CalendarEvent[];
   isLoading: boolean;
   onToggleComplete: (eventId: number) => void;
-  onEventEdit?: (event: CalendarEvent) => void;
+  onEventUpdate?: (event: CalendarEvent) => void;
+  onEventDelete?: (eventId: number) => void;
   itemsPerPage?: number;
   showDate?: boolean;
 }
@@ -17,11 +19,14 @@ export function ExpiredTodoList({
   expiredTodos,
   isLoading,
   onToggleComplete,
-  onEventEdit,
+  onEventUpdate,
+  onEventDelete,
   itemsPerPage = 5,
   showDate = false,
 }: ExpiredTodoListProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   // Pagination logic for expired todos
   const paginatedExpiredTodos = useMemo(() => {
@@ -37,6 +42,29 @@ export function ExpiredTodoList({
       onToggleComplete(eventId);
     },
     [onToggleComplete],
+  );
+
+  const handleEventEdit = useCallback((event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setIsEventDialogOpen(true);
+  }, []);
+
+  const handleEventSave = useCallback(
+    (event: CalendarEvent) => {
+      onEventUpdate?.(event);
+      setIsEventDialogOpen(false);
+      setSelectedEvent(null);
+    },
+    [onEventUpdate],
+  );
+
+  const handleEventDelete = useCallback(
+    (eventId: number) => {
+      onEventDelete?.(eventId);
+      setIsEventDialogOpen(false);
+      setSelectedEvent(null);
+    },
+    [onEventDelete],
   );
 
   if (expiredTodos.length === 0) {
@@ -60,7 +88,7 @@ export function ExpiredTodoList({
               <div
                 key={todo.id}
                 className="border rounded-lg p-2 cursor-pointer hover:bg-muted/50 transition-colors"
-                onDoubleClick={() => onEventEdit?.(todo)}
+                onDoubleClick={() => handleEventEdit(todo)}
                 title="雙擊編輯"
               >
                 <EventItem
@@ -116,6 +144,18 @@ export function ExpiredTodoList({
               </Button>
             </div>
           )}
+
+          {/* Event Dialog */}
+          <EventDialog
+            event={selectedEvent}
+            isOpen={isEventDialogOpen}
+            onClose={() => {
+              setIsEventDialogOpen(false);
+              setSelectedEvent(null);
+            }}
+            onSave={handleEventSave}
+            onDelete={handleEventDelete}
+          />
         </>
       )}
     </div>

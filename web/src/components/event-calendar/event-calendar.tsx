@@ -106,20 +106,6 @@ export function EventCalendar({
     setView(initialView);
   }, [initialView, setView]);
 
-  // Listen for expired todo edit events
-  useEffect(() => {
-    const handleEditExpiredTodo = (event: CustomEvent) => {
-      const todoEvent = event.detail as CalendarEvent;
-      handleEventSelect(todoEvent);
-    };
-
-    window.addEventListener('edit-expired-todo', handleEditExpiredTodo as EventListener);
-
-    return () => {
-      window.removeEventListener('edit-expired-todo', handleEditExpiredTodo as EventListener);
-    };
-  }, []);
-
   const handlePrevious = () => {
     if (view === 'month') {
       setCurrentDate(subMonths(currentDate, 1));
