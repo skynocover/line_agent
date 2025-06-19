@@ -79,7 +79,7 @@ app.post('/api/webhook', async (c) => {
   // @ts-ignore
   const db = c.get('db') as Database;
 
-  const controller = new FileController(db, c.env.APP_STORAGE);
+  const controller = new FileController(db, APP_STORAGE);
 
   const { events }: any = await c.req.json();
 
@@ -94,6 +94,9 @@ app.post('/api/webhook', async (c) => {
           case 'audio':
           case 'file':
             return await handleGeneralFile(event, accessToken, controller);
+
+          case 'text':
+            return await handleTextMessage(event, accessToken, controller);
         }
       }
     });
@@ -107,6 +110,19 @@ app.post('/api/webhook', async (c) => {
 
   return c.text('Success');
 });
+
+const handleTextMessage = async (event: any, accessToken: string, controller: FileController) => {
+  const { source, message, replyToken } = event;
+  const userId = source.userId;
+  console.log('🚀 ~ handleTextMessage ~ userId:', userId);
+
+  return await replyMessage({
+    replyToken,
+    message: 'Hello',
+    accessToken,
+    quoteToken: message.quoteToken,
+  });
+};
 
 const handleGeneralFile = async (event: any, accessToken: string, controller: FileController) => {
   const { source, message, replyToken } = event;
@@ -131,6 +147,7 @@ const handleGeneralFile = async (event: any, accessToken: string, controller: Fi
       replyToken,
       message: `檔案「${fileInfo.fileName}」已成功備份！`,
       accessToken,
+      quoteToken: message.quoteToken,
     });
   } catch (error) {
     console.error('🚀 ~ handleGeneralFile ~ error:', error);
