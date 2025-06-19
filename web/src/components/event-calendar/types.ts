@@ -11,6 +11,7 @@ export interface CalendarEvent {
   label?: string;
   location?: string;
   completed?: boolean;
+  createdAt?: Date;
 }
 
 export type EventColor = 'blue' | 'orange' | 'violet' | 'rose' | 'emerald';

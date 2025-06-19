@@ -230,7 +230,9 @@ export function EventItem({
             checked={event.completed}
             onChange={(e) => {
               e.stopPropagation();
-              onToggleComplete(event.id);
+              if (event.id) {
+                onToggleComplete(event.id);
+              }
             }}
             className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
             onClick={(e) => e.stopPropagation()}

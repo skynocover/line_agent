@@ -91,3 +91,22 @@ export const deleteEvent = async (userId: string, eventId: number): Promise<void
     throw error;
   }
 };
+
+export interface GetIncompleteExpiredEventsResponse {
+  data: CalendarEvent[];
+  count: number;
+}
+
+export const getIncompleteExpiredEvents = async (
+  userId: string,
+): Promise<GetIncompleteExpiredEventsResponse> => {
+  try {
+    const { data } = await axios.get(`${API_BASE_URL}/${userId}/events/incomplete-expired`);
+    return data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data) {
+      throw new Error(error.response.data.error);
+    }
+    throw error;
+  }
+};
