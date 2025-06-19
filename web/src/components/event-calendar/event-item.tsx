@@ -18,6 +18,27 @@ const formatTimeWithOptionalMinutes = (date: Date) => {
   return format(date, getMinutes(date) === 0 ? 'ha' : 'h:mma').toLowerCase();
 };
 
+// Format date with time, optionally showing date
+const formatDateTime = (date: Date, showDate: boolean = false) => {
+  if (showDate) {
+    const dateStr = format(date, 'M/d');
+    const timeStr = formatTimeWithOptionalMinutes(date);
+    return `${dateStr} ${timeStr}`;
+  }
+  return formatTimeWithOptionalMinutes(date);
+};
+
+// Format date range for all day events
+const formatAllDayDateRange = (startDate: Date, endDate: Date) => {
+  const start = format(startDate, 'M/d');
+  const end = format(endDate, 'M/d');
+
+  if (start === end) {
+    return `All day (${start})`;
+  }
+  return `All day (${start} - ${end})`;
+};
+
 interface EventWrapperProps {
   event: CalendarEvent;
   isFirstDay?: boolean;
@@ -73,6 +94,7 @@ interface EventItemProps {
   isDragging?: boolean;
   onClick?: (e: React.MouseEvent) => void;
   showTime?: boolean;
+  showDate?: boolean;
   currentTime?: Date; // For updating time during drag
   isFirstDay?: boolean;
   isLastDay?: boolean;
@@ -91,6 +113,7 @@ export function EventItem({
   isDragging,
   onClick,
   showTime,
+  showDate = false,
   currentTime,
   isFirstDay = true,
   isLastDay = true,
@@ -124,17 +147,15 @@ export function EventItem({
   }, [displayStart, displayEnd]);
 
   const getEventTime = () => {
-    if (event.allDay) return 'All day';
+    if (event.allDay) return formatAllDayDateRange(displayStart, displayEnd);
 
     // For short events (less than 45 minutes), only show start time
     if (durationMinutes < 45) {
-      return formatTimeWithOptionalMinutes(displayStart);
+      return formatDateTime(displayStart, showDate);
     }
 
     // For longer events, show both start and end time
-    return `${formatTimeWithOptionalMinutes(displayStart)} - ${formatTimeWithOptionalMinutes(
-      displayEnd,
-    )}`;
+    return `${formatDateTime(displayStart, showDate)} - ${formatDateTime(displayEnd, showDate)}`;
   };
 
   if (view === 'month') {
@@ -156,12 +177,21 @@ export function EventItem({
       >
         {children || (
           <span className="truncate">
-            {!event.allDay && (
-              <span className="truncate sm:text-xs font-normal opacity-70 uppercase">
-                {formatTimeWithOptionalMinutes(displayStart)}{' '}
-              </span>
+            {event.allDay ? (
+              <>
+                <span className="truncate sm:text-xs font-normal opacity-70 uppercase">
+                  {formatAllDayDateRange(displayStart, displayEnd)}{' '}
+                </span>
+                {event.title}
+              </>
+            ) : (
+              <>
+                <span className="truncate sm:text-xs font-normal opacity-70 uppercase">
+                  {formatDateTime(displayStart, showDate)}{' '}
+                </span>
+                {event.title}
+              </>
             )}
-            {event.title}
           </span>
         )}
       </EventWrapper>
@@ -191,7 +221,7 @@ export function EventItem({
           <div className="truncate">
             {event.title}{' '}
             {showTime && (
-              <span className="opacity-70">{formatTimeWithOptionalMinutes(displayStart)}</span>
+              <span className="opacity-70">{formatDateTime(displayStart, showDate)}</span>
             )}
           </div>
         ) : (
@@ -241,11 +271,10 @@ export function EventItem({
         <div className="text-sm font-medium">{event.title}</div>
         <div className="text-xs opacity-70">
           {event.allDay ? (
-            <span>All day</span>
+            <span>{formatAllDayDateRange(displayStart, displayEnd)}</span>
           ) : (
             <span className="uppercase">
-              {formatTimeWithOptionalMinutes(displayStart)} -{' '}
-              {formatTimeWithOptionalMinutes(displayEnd)}
+              {formatDateTime(displayStart, showDate)} - {formatDateTime(displayEnd, showDate)}
             </span>
           )}
         </div>
