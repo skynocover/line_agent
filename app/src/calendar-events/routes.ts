@@ -98,4 +98,24 @@ calendarEvents.delete('/:userId/events/:eventId', async (c) => {
   }
 });
 
+// Get incomplete expired events (events before today that are not completed)
+calendarEvents.get('/:userId/events/incomplete-expired', async (c) => {
+  const userId = c.req.param('userId');
+
+  // @ts-ignore
+  const db = c.get('db') as Database;
+  const controller = new CalendarEventController(db);
+
+  try {
+    const expiredEvents = await controller.getIncompleteExpiredEvents(userId);
+    return c.json({
+      data: expiredEvents,
+      count: expiredEvents.length,
+    });
+  } catch (error) {
+    console.error('Error fetching incomplete expired events:', error);
+    return c.json({ error: 'Failed to fetch incomplete expired events' }, 500);
+  }
+});
+
 export default calendarEvents;

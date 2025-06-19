@@ -12,7 +12,7 @@ export const files = sqliteTable(
     fileName: text('file_name').notNull(),
     fileSize: integer('file_size').notNull(),
     mimeType: text('mime_type').notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+    createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
   },
   (table) => [index('user_idx').on(table.userId)],
 );
@@ -39,7 +39,7 @@ export const calendarEvents = sqliteTable(
     location: text('location'),
     completed: integer('completed', { mode: 'boolean' }).default(false),
     userId: text('user_id').notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+    createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
   },
   (table) => [index('user_events_idx').on(table.userId)],
 );

@@ -106,6 +106,7 @@ export class CalendarEventController {
         ...eventData,
         start: new Date(eventData.start || ''),
         end: new Date(eventData.end || ''),
+        createdAt: undefined,
       })
       .where(eq(calendarEvents.id, eventId))
       .returning();
@@ -121,5 +122,18 @@ export class CalendarEventController {
 
     await this.db.delete(calendarEvents).where(eq(calendarEvents.id, eventId));
     return true;
+  }
+
+  async getIncompleteExpiredEvents(
+    userId: string,
+  ): Promise<(typeof calendarEvents.$inferSelect)[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 設定為今天凌晨
+
+    return await this.db.query.calendarEvents.findMany({
+      where: (events, { eq, and, lt }) =>
+        and(eq(events.userId, userId), eq(events.completed, false), lt(events.end, today)),
+      orderBy: (events, { asc }) => [asc(events.end)],
+    });
   }
 }
