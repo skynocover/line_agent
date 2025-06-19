@@ -137,6 +137,7 @@ const handleTextMessage = async (
     userId,
     controller: calendarEventController,
     apiKey: googleApiKey,
+    messageId: message.id,
   });
 
   return await replyMessage({

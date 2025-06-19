@@ -31,6 +31,7 @@ export const createEventToolFactory = (
   controller: CalendarEventController,
   userId: string,
   timezone: string = 'Asia/Taipei',
+  messageId: string,
 ) =>
   tool({
     description: '創建一個新的行事曆活動',
@@ -48,6 +49,7 @@ export const createEventToolFactory = (
           label,
           userId,
           completed: false,
+          messageId,
         };
 
         console.log('🚀 ~ createEventTool ~ eventData:', eventData);
@@ -94,12 +96,13 @@ export async function createEventWithAI(
   userMessage: string,
   context: {
     userId: string;
+    messageId: string;
     controller: CalendarEventController;
     apiKey: string;
     timezone?: string; // 新增時區參數
   },
 ) {
-  const { userId, controller, apiKey, timezone = 'Asia/Taipei' } = context;
+  const { userId, controller, apiKey, timezone = 'Asia/Taipei', messageId } = context;
 
   try {
     const ai = createGoogleAI({ apiKey });
@@ -116,7 +119,7 @@ export async function createEventWithAI(
     }).format(now);
 
     // 創建 tool 實例
-    const createEventTool = createEventToolFactory(controller, userId, timezone);
+    const createEventTool = createEventToolFactory(controller, userId, timezone, messageId);
 
     const result = await generateText({
       model: ai('gemini-2.0-flash-exp'),

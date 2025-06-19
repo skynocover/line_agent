@@ -43,6 +43,13 @@
       "when": 1750321087682,
       "tag": "0005_fast_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1750337870881,
+      "tag": "0006_neat_shiver_man",
+      "breakpoints": true
     }
   ]
 }

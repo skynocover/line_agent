@@ -39,6 +39,7 @@ export const calendarEvents = sqliteTable(
     location: text('location'),
     completed: integer('completed', { mode: 'boolean' }).default(false),
     userId: text('user_id').notNull(),
+    messageId: text('message_id').unique(),
     createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
   },
   (table) => [index('user_events_idx').on(table.userId)],
