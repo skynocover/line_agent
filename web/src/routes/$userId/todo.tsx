@@ -93,7 +93,6 @@ function RouteComponent() {
         onToggleComplete={handleToggleComplete}
         onEventUpdate={handleEventUpdate}
         onEventDelete={handleEventDelete}
-        showDate={true}
       />
 
       {/* Calendar Section */}
