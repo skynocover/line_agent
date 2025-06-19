@@ -9,11 +9,15 @@
     "d1:migrations:local": "wrangler d1 migrations apply DB --local"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.2.19",
     "@cloudflare/workers-types": "^4.20250613.0",
+    "ai": "^4.3.16",
     "axios": "^1.9.0",
+    "date-fns": "^4.1.0",
     "drizzle-orm": "^0.44.2",
     "file-type": "^21.0.0",
-    "hono": "^4.7.11"
+    "hono": "^4.7.11",
+    "zod": "^3.25.64"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.1",

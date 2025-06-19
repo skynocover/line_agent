@@ -10,6 +10,8 @@ import type { Database } from '../db';
 import filesRoutes from './files/routes';
 import { FileController } from './files/controller';
 import calendarEvents from './calendar-events/routes';
+import { CalendarEventController } from './calendar-events/controller';
+import { createEventWithAI } from '../lib/ai';
 
 export type Bindings = {
   APP_STORAGE: R2Bucket;
@@ -17,6 +19,7 @@ export type Bindings = {
   LINE_CHANNEL_SECRET: string;
   DB: D1Database;
   ENV: string;
+  GOOGLE_AI_API_KEY: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -76,6 +79,7 @@ app.get('/:userId/:fileId', async (c) => {
 app.post('/api/webhook', async (c) => {
   const accessToken = c.env.LINE_ACCESS_TOKEN;
   const APP_STORAGE = c.env.APP_STORAGE;
+  const googleApiKey = c.env.GOOGLE_AI_API_KEY;
   // @ts-ignore
   const db = c.get('db') as Database;
 
@@ -96,7 +100,15 @@ app.post('/api/webhook', async (c) => {
             return await handleGeneralFile(event, accessToken, controller);
 
           case 'text':
-            return await handleTextMessage(event, accessToken, controller);
+            // @ts-ignore
+            const db = c.get('db') as Database;
+            const calendarEventController = new CalendarEventController(db);
+            return await handleTextMessage(
+              event,
+              accessToken,
+              calendarEventController,
+              googleApiKey,
+            );
         }
       }
     });
@@ -111,14 +123,25 @@ app.post('/api/webhook', async (c) => {
   return c.text('Success');
 });
 
-const handleTextMessage = async (event: any, accessToken: string, controller: FileController) => {
+const handleTextMessage = async (
+  event: any,
+  accessToken: string,
+  calendarEventController: CalendarEventController,
+  googleApiKey: string,
+) => {
   const { source, message, replyToken } = event;
   const userId = source.userId;
   console.log('🚀 ~ handleTextMessage ~ userId:', userId);
 
+  const result = await createEventWithAI(message.text, {
+    userId,
+    controller: calendarEventController,
+    apiKey: googleApiKey,
+  });
+
   return await replyMessage({
     replyToken,
-    message: 'Hello',
+    message: result.text || result.error || 'Error',
     accessToken,
     quoteToken: message.quoteToken,
   });
