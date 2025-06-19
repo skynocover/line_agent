@@ -26,11 +26,68 @@ export const createEventSchema = z.object({
   label: z.string().optional().describe('活動標籤'),
 });
 
-// AI 工具定義：創建 calendar event
-export const createEventTool = tool({
-  description: '創建一個新的行事曆活動',
-  parameters: createEventSchema,
-});
+// AI 工具工廠函數：創建 calendar event tool
+export const createEventToolFactory = (
+  controller: CalendarEventController,
+  userId: string,
+  timezone: string = 'Asia/Taipei',
+) =>
+  tool({
+    description: '創建一個新的行事曆活動',
+    parameters: createEventSchema,
+    execute: async ({ title, description, start, end, allDay, color, label }) => {
+      try {
+        // 構建 NewCalendarEvent 物件
+        const eventData: NewCalendarEvent = {
+          title,
+          description,
+          start: new Date(start),
+          end: new Date(end),
+          allDay: allDay || false,
+          color,
+          label,
+          userId,
+          completed: false,
+        };
+
+        console.log('🚀 ~ createEventTool ~ eventData:', eventData);
+
+        // 使用 controller 創建活動
+        const createdEvent = await controller.createEvent(eventData);
+
+        const resultMessage = `成功建立待辦事項
+標題: ${eventData.title}
+開始時間: ${eventData.start.toLocaleString('zh-TW', {
+          timeZone: timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+結束時間: ${eventData.end.toLocaleString('zh-TW', {
+          timeZone: timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`;
+
+        return {
+          success: true,
+          message: resultMessage,
+          createdEvent,
+        };
+      } catch (error) {
+        console.error('創建活動失敗:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : '未知錯誤',
+        };
+      }
+    },
+  });
 
 // AI 助手函數，使用工具創建活動
 export async function createEventWithAI(
@@ -58,17 +115,20 @@ export async function createEventWithAI(
       minute: '2-digit',
     }).format(now);
 
+    // 創建 tool 實例
+    const createEventTool = createEventToolFactory(controller, userId, timezone);
+
     const result = await generateText({
       model: ai('gemini-2.0-flash-exp'),
       messages: [
         {
           role: 'system',
-          content: `你是一個專門處理 LINE 或通訊軟體訊息的 AI 助手。你的主要任務是從用戶轉傳的訊息中提取時間、活動資訊，並使用 createEventTool 工具創建行事曆活動。
+          content: `你是一個專門處理 LINE 或通訊軟體訊息的 AI 助手。你的主要任務是從用戶轉傳的訊息中提取時間、活動資訊，並使用 createEvent 工具創建行事曆活動。
 
 核心功能
 - 分析用戶轉傳的 LINE 或其他通訊軟體訊息
 - 從訊息中提取時間、地點、活動內容等資訊
-- 使用 createEventTool 創建對應的行事曆活動
+- 使用 createEvent 工具創建對應的行事曆活動
 
 時區資訊:
 - 用戶時區: ${timezone}
@@ -154,8 +214,16 @@ allDay: true
 title: "下午2點開會"
 start: "2024-01-16T14:00:00+08:00"
 end: "2024-01-16T15:00:00+08:00"
+
+情境7：跨天
+用戶訊息：「出差時間」
+title: "下週一到下週三"
+start: "2024-01-21T00:00:00+08:00"
+end: "2024-01-23T23:59:59+08:00"
+allDay: true
+
 重要提醒
-- 必須使用 createEventTool 來創建活動
+- 必須使用 createEvent 工具來創建活動
 - 時間計算要準確，特別注意時區偏移
 - 不要使用 UTC 時間 (Z 結尾)，要使用用戶所在時區
 - 標題是唯一必填且不能為空的欄位
@@ -172,33 +240,17 @@ end: "2024-01-16T15:00:00+08:00"
       toolChoice: 'auto',
     });
 
-    console.log(result.text);
-
-    // 如果 AI 調用了 createEvent 工具，直接使用 controller 創建活動
     let resultText = '';
     let createdEvent = null;
     if (result.toolCalls && result.toolCalls.length > 0) {
       for (const toolCall of result.toolCalls) {
         if (toolCall.toolName === 'createEvent') {
-          const eventParams = toolCall.args as CreateEventParams;
+          const { title, start, end } = toolCall.args as CreateEventParams;
 
-          // 構建 NewCalendarEvent 物件
-          const eventData: NewCalendarEvent = {
-            title: eventParams.title,
-            description: eventParams.description,
-            start: new Date(eventParams.start),
-            end: new Date(eventParams.end),
-            allDay: eventParams.allDay || false,
-            color: eventParams.color,
-            label: eventParams.label,
-            userId: userId,
-            completed: false,
-          };
-
-          console.log('🚀 ~ createEventWithAI ~ eventData:', eventData);
+          console.log('🚀 ~ createEventWithAI ~ eventData:', title, start, end);
           resultText = `成功建立待辦事項
-標題: ${eventData.title}
-開始時間: ${eventData.start.toLocaleString('zh-TW', {
+標題: ${title}
+開始時間: ${new Date(start).toLocaleString('zh-TW', {
             timeZone: timezone,
             year: 'numeric',
             month: '2-digit',
@@ -206,7 +258,7 @@ end: "2024-01-16T15:00:00+08:00"
             hour: '2-digit',
             minute: '2-digit',
           })}
-結束時間: ${eventData.end.toLocaleString('zh-TW', {
+結束時間: ${new Date(end).toLocaleString('zh-TW', {
             timeZone: timezone,
             year: 'numeric',
             month: '2-digit',
@@ -215,9 +267,6 @@ end: "2024-01-16T15:00:00+08:00"
             minute: '2-digit',
           })}
 `;
-
-          // 使用 controller 直接創建活動
-          createdEvent = await controller.createEvent(eventData);
         }
       }
     }
