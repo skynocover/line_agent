@@ -53,7 +53,7 @@ const RootComponent = () => {
       icon: FileText,
       label: '檔案管理',
       description: '管理您的檔案',
-      color: 'green',
+      color: 'amber',
       requireAuth: true,
     },
     {
@@ -72,6 +72,7 @@ const RootComponent = () => {
     const colorClasses = {
       blue: 'bg-blue-100 text-blue-600 group-hover:bg-blue-200',
       green: 'bg-green-100 text-green-600 group-hover:bg-green-200',
+      amber: 'bg-amber-100 text-amber-700 group-hover:bg-amber-200',
       purple: 'bg-purple-100 text-purple-600 group-hover:bg-purple-200',
     };
 

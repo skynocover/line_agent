@@ -133,11 +133,11 @@ const HomePage = () => {
 
         {profile ? (
           <Link to="/$userId/files" params={{ userId: profile.userId }} className="no-underline">
-            <Card className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer border-green-200 hover:border-green-300">
+            <Card className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer border-amber-200 hover:border-amber-300">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 justify-between">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-green-600" />
+                    <FileText className="w-5 h-5 text-amber-700" />
                     檔案 ➡️ 永久備份
                   </div>
                 </CardTitle>
@@ -149,7 +149,7 @@ const HomePage = () => {
                   <p className="text-sm text-muted-foreground">🔒 加密保護隱私</p>
                   <p className="text-sm text-muted-foreground">📱 多裝置同步</p>
                 </div>
-                <div className="mt-4 flex items-center gap-2 text-sm text-green-600 font-medium">
+                <div className="mt-4 flex items-center gap-2 text-sm text-amber-700 font-medium">
                   <span>點擊進入管理</span>
                   <ArrowRight className="w-4 h-4" />
                 </div>
@@ -157,10 +157,10 @@ const HomePage = () => {
             </Card>
           </Link>
         ) : (
-          <Card className="hover:shadow-lg transition-shadow border-green-200">
+          <Card className="hover:shadow-lg transition-shadow border-amber-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-green-600" />
+                <FileText className="w-5 h-5 text-amber-700" />
                 檔案 ➡️ 永久備份
               </CardTitle>
               <CardDescription>上傳您的重要檔案，享受安全可靠的雲端儲存服務</CardDescription>
@@ -177,51 +177,15 @@ const HomePage = () => {
         )}
       </div>
 
-      {/* User Welcome Section for authenticated users */}
-      {profile && (
-        <Card className="mb-6 border-green-200 bg-gradient-to-r from-green-50 to-blue-50">
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2 text-green-700">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckSquare className="w-5 h-5 text-green-600" />
-              </div>
-              歡迎回來，{profile.displayName}！
-            </CardTitle>
-            <CardDescription className="text-green-600">
-              您已成功登入，現在可以使用所有功能了
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="flex justify-center gap-4">
-              <Link to="/$userId/todo" params={{ userId: profile.userId }}>
-                <Button className="bg-purple-600 hover:bg-purple-700">
-                  <CheckSquare className="w-4 h-4 mr-2" />
-                  待辦事項
-                </Button>
-              </Link>
-              <Link to="/$userId/files" params={{ userId: profile.userId }}>
-                <Button
-                  variant="outline"
-                  className="border-green-600 text-green-600 hover:bg-green-50"
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  檔案管理
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Login Section for non-authenticated users */}
       {!profile && (
-        <Card className="mb-6 border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50">
+        <Card className="mb-6 border-green-200 bg-gradient-to-r from-green-50 to-green-100">
           <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2 text-blue-700">
+            <CardTitle className="flex items-center justify-center gap-2 text-green-700">
               <LogIn className="w-6 h-6" />
               立即登入開始使用
             </CardTitle>
-            <CardDescription className="text-blue-600">
+            <CardDescription className="text-green-600">
               登入後即可享受完整的數位管家服務，包括待辦事項管理和檔案儲存
             </CardDescription>
           </CardHeader>
@@ -230,7 +194,7 @@ const HomePage = () => {
               size="lg"
               onClick={handleLogin}
               disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3"
             >
               {isLoading ? (
                 <>
@@ -240,11 +204,10 @@ const HomePage = () => {
               ) : (
                 <>
                   <LogIn className="w-5 h-5 mr-2" />
-                  登入帳號
+                  使用Line登入
                 </>
               )}
             </Button>
-            <p className="text-sm text-blue-500 mt-3">🔒 使用 LINE 帳號安全登入，無需額外註冊</p>
           </CardContent>
         </Card>
       )}
