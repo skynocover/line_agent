@@ -1,7 +1,6 @@
-import { google, createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { generateText, tool } from 'ai';
 import { z } from 'zod';
-import { format } from 'date-fns';
 import type { CalendarEventController } from '../src/calendar-events/controller';
 import type { calendarEvents, NewCalendarEvent } from '../db/schema';
 

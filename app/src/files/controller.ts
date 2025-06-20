@@ -1,9 +1,8 @@
-import { Context } from 'hono';
 import { eq, sql } from 'drizzle-orm';
 import type { Database } from '../../db';
 import { files } from '../../db/schema';
 import type { Newfile } from '../../db/schema';
-import type { GetUserFilesResponse, ErrorResponse, File } from '../../types/api';
+import type { GetUserFilesResponse } from '../../types/api';
 
 export class FileController {
   constructor(private db: Database, private storage: R2Bucket) {}

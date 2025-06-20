@@ -1,4 +1,3 @@
-import { Context } from 'hono';
 import { eq, sql } from 'drizzle-orm';
 import type { Database } from '../../db';
 import { calendarEvents } from '../../db/schema';
