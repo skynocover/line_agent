@@ -2,16 +2,16 @@ import { Hono } from 'hono';
 import { R2Bucket, D1Database } from '@cloudflare/workers-types';
 import { fileTypeFromBuffer } from 'file-type';
 import { cors } from 'hono/cors';
-import axios from 'axios';
 
 import { createDb } from '../db';
 import { downloadFile, replyMessage } from '../lib/line';
-import { type Newfile } from '../db/schema';
+import { type Newfile, type NewMessage } from '../db/schema';
 import type { Database } from '../db';
 import filesRoutes from './files/routes';
 import { FileController } from './files/controller';
 import calendarEvents from './calendar-events/routes';
 import { CalendarEventController } from './calendar-events/controller';
+import { MessageController } from './messages/controller';
 import { createEventWithAI } from '../lib/ai';
 import { verifyLiffAccessToken, verifyUserIdMatch } from './middlewares/verify';
 
@@ -112,10 +112,12 @@ app.post('/webhook', async (c) => {
             // @ts-ignore
             const db = c.get('db') as Database;
             const calendarEventController = new CalendarEventController(db);
+            const messageController = new MessageController(db);
             return await handleTextMessage(
               event,
               accessToken,
               calendarEventController,
+              messageController,
               googleApiKey,
             );
         }
@@ -136,25 +138,51 @@ const handleTextMessage = async (
   event: any,
   accessToken: string,
   calendarEventController: CalendarEventController,
+  messageController: MessageController,
   googleApiKey: string,
 ) => {
   const { source, message, replyToken } = event;
   const userId = source.userId;
   console.log('🚀 ~ handleTextMessage ~ userId:', userId);
 
-  const result = await createEventWithAI(message.text, {
-    userId,
-    controller: calendarEventController,
-    apiKey: googleApiKey,
+  // 首先記錄訊息到資料庫
+  const messageData: NewMessage = {
     messageId: message.id,
-  });
+    userId,
+    content: message.text,
+    // eventId 會在創建事件後更新
+  };
 
-  return await replyMessage({
-    replyToken,
-    message: result.text || result.error || 'Error',
-    accessToken,
-    quoteToken: message.quoteToken,
-  });
+  try {
+    const savedMessageId = await messageController.createMessage(messageData);
+
+    // 使用 AI 創建事件
+    const { createdEvent, text, error } = await createEventWithAI(message.text, {
+      userId,
+      controller: calendarEventController,
+      apiKey: googleApiKey,
+      messageId: message.id,
+    });
+
+    if (createdEvent) {
+      await messageController.updateMessageEventId(savedMessageId, createdEvent.id);
+    }
+
+    return await replyMessage({
+      replyToken,
+      message: text || error || 'Error',
+      accessToken,
+      quoteToken: message.quoteToken,
+    });
+  } catch (error) {
+    console.error('🚀 ~ handleTextMessage ~ error:', error);
+    return await replyMessage({
+      replyToken,
+      message: `處理訊息時發生錯誤: ${error}`,
+      accessToken,
+      quoteToken: message.quoteToken,
+    });
+  }
 };
 
 const handleGeneralFile = async (event: any, accessToken: string, controller: FileController) => {

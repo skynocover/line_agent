@@ -24,6 +24,23 @@ export const users = sqliteTable('users', {
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
 
+// 定義訊息表
+export const messages = sqliteTable(
+  'messages',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    messageId: text('message_id').notNull().unique(),
+    userId: text('user_id').notNull(),
+    content: text('content').notNull(),
+    eventId: integer('event_id'), // 關聯到 calendar_events 表的 id
+    createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+  },
+  (table) => [
+    index('user_messages_idx').on(table.userId),
+    index('event_message_idx').on(table.eventId),
+  ],
+);
+
 // 定義行事曆事件表
 export const calendarEvents = sqliteTable(
   'calendar_events',
@@ -46,4 +63,5 @@ export const calendarEvents = sqliteTable(
 );
 
 export type Newfile = typeof files.$inferInsert;
+export type NewMessage = typeof messages.$inferInsert;
 export type NewCalendarEvent = typeof calendarEvents.$inferInsert;

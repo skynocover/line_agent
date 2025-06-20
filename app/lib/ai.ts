@@ -3,7 +3,7 @@ import { generateText, tool } from 'ai';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import type { CalendarEventController } from '../src/calendar-events/controller';
-import type { NewCalendarEvent } from '../db/schema';
+import type { calendarEvents, NewCalendarEvent } from '../db/schema';
 
 export const createGoogleAI = ({ apiKey }: { apiKey: string }) => {
   return createGoogleGenerativeAI({
@@ -244,32 +244,45 @@ allDay: true
     });
 
     let resultText = '';
-    let createdEvent = null;
+    let createdEvent: typeof calendarEvents.$inferSelect | null = null;
+
     if (result.toolCalls && result.toolCalls.length > 0) {
       for (const toolCall of result.toolCalls) {
-        if (toolCall.toolName === 'createEvent') {
-          const { title, start, end } = toolCall.args as CreateEventParams;
+        if (toolCall.toolName === 'createEvent' && result.toolResults) {
+          // 找到對應的 tool result
+          const toolResult = result.toolResults.find((tr) => tr.toolCallId === toolCall.toolCallId);
 
-          console.log('🚀 ~ createEventWithAI ~ eventData:', title, start, end);
-          resultText = `成功建立待辦事項
+          if (toolResult && toolResult.result) {
+            const toolResultData = toolResult.result as any;
+
+            if (toolResultData.success && toolResultData.createdEvent) {
+              createdEvent = toolResultData.createdEvent;
+              const { title, start, end } = toolCall.args as CreateEventParams;
+
+              console.log('🚀 ~ createEventWithAI ~ createdEvent:', createdEvent);
+
+              resultText = `成功建立待辦事項
 標題: ${title}
 開始時間: ${new Date(start).toLocaleString('zh-TW', {
-            timeZone: timezone,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
 結束時間: ${new Date(end).toLocaleString('zh-TW', {
-            timeZone: timezone,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-`;
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}`;
+            } else if (toolResultData.success === false) {
+              resultText = `建立待辦事項失敗: ${toolResultData.error || '未知錯誤'}`;
+            }
+          }
         }
       }
     }
