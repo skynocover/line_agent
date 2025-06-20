@@ -48,9 +48,7 @@ export const createEvent = async (
 ): Promise<CalendarEvent> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/${userId}/events`, event, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
     return response.data;
   } catch (error) {
@@ -68,9 +66,7 @@ export const updateEvent = async (
 ): Promise<CalendarEvent> => {
   try {
     const response = await axios.patch(`${API_BASE_URL}/${userId}/events/${eventId}`, event, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
     return response.data;
   } catch (error) {

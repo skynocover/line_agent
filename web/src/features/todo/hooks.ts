@@ -16,18 +16,6 @@ interface UseTodosOptions {
   getTimeRange: () => { startTime: string; endTime: string };
 }
 
-// 独立的 hook 来获取过期未完成的待办事项
-export function useIncompleteExpiredTodos(userId: string) {
-  return useQuery({
-    queryKey: ['incomplete-expired-todos', userId],
-    queryFn: async () => {
-      const response = await getIncompleteExpiredEvents(userId);
-      return response.data || [];
-    },
-    enabled: !!userId,
-  });
-}
-
 export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOptions) {
   const queryClient = useQueryClient();
   const queryKey = ['todos', userId, currentDate, view];
@@ -45,7 +33,7 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
       const { startTime, endTime } = getTimeRange();
       const response = await getEvents(userId, {
         page: 1,
-        limit: 50,
+        limit: 100,
         startTime,
         endTime,
       });
@@ -277,6 +265,8 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
 
     // Utilities
     refetch,
+
+    // incomplete expired todos
     incompleteExpiredTodos,
     isLoadingIncompleteExpiredTodos,
     errorIncompleteExpiredTodos,

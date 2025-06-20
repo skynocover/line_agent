@@ -56,6 +56,7 @@ function RouteComponent() {
     };
   }, [currentDate, view]);
 
+  // TODO: 處理error
   const {
     todos,
     isLoading,
@@ -72,16 +73,10 @@ function RouteComponent() {
   });
 
   const handleToggleComplete = useCallback(
-    async (eventId: number) => {
-      const todo = incompleteExpiredTodos.find((t: CalendarEvent) => t.id === eventId);
-      if (todo) {
-        await handleEventUpdate({
-          ...todo,
-          completed: !todo.completed,
-        });
-      }
+    async (todo: CalendarEvent) => {
+      await handleEventUpdate({ ...todo, completed: true });
     },
-    [incompleteExpiredTodos, handleEventUpdate],
+    [handleEventUpdate],
   );
 
   return (

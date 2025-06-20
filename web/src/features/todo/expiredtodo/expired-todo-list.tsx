@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { addDays } from 'date-fns';
-import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon } from 'lucide-react';
 import { EventItem } from '@/components/event-calendar/event-item';
 import { EventDialog } from '@/components/event-calendar/event-dialog';
 import type { CalendarEvent } from '@/components/event-calendar/types';
@@ -10,11 +10,12 @@ import { cn } from '@/lib/utils';
 interface ExpiredTodoListProps {
   expiredTodos: CalendarEvent[];
   isLoading: boolean;
-  onToggleComplete: (eventId: number) => void;
-  onEventUpdate?: (event: CalendarEvent) => void;
-  onEventDelete?: (eventId: number) => void;
-  itemsPerPage?: number;
+  onToggleComplete: (todo: CalendarEvent) => Promise<void>;
+  onEventUpdate: (event: CalendarEvent) => void;
+  onEventDelete: (eventId: number) => void;
 }
+
+const itemsPerPage = 5;
 
 export function ExpiredTodoList({
   expiredTodos,
@@ -22,7 +23,6 @@ export function ExpiredTodoList({
   onToggleComplete,
   onEventUpdate,
   onEventDelete,
-  itemsPerPage = 5,
 }: ExpiredTodoListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
@@ -34,16 +34,9 @@ export function ExpiredTodoList({
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return expiredTodos.slice(startIndex, endIndex);
-  }, [expiredTodos, currentPage, itemsPerPage]);
+  }, [expiredTodos, currentPage]);
 
   const totalPages = Math.ceil(expiredTodos.length / itemsPerPage);
-
-  const handleToggleComplete = useCallback(
-    async (eventId: number) => {
-      onToggleComplete(eventId);
-    },
-    [onToggleComplete],
-  );
 
   const handlePostpone = useCallback(
     (todo: CalendarEvent, days: number) => {
@@ -52,7 +45,7 @@ export function ExpiredTodoList({
         start: addDays(new Date(todo.start), days),
         end: addDays(new Date(todo.end), days),
       };
-      onEventUpdate?.(updatedTodo);
+      onEventUpdate(updatedTodo);
     },
     [onEventUpdate],
   );
@@ -64,7 +57,7 @@ export function ExpiredTodoList({
 
   const handleEventSave = useCallback(
     (event: CalendarEvent) => {
-      onEventUpdate?.(event);
+      onEventUpdate(event);
       setIsEventDialogOpen(false);
       setSelectedEvent(null);
     },
@@ -73,7 +66,7 @@ export function ExpiredTodoList({
 
   const handleEventDelete = useCallback(
     (eventId: number) => {
-      onEventDelete?.(eventId);
+      onEventDelete(eventId);
       setIsEventDialogOpen(false);
       setSelectedEvent(null);
     },
@@ -113,7 +106,7 @@ export function ExpiredTodoList({
                         <EventItem
                           event={todo}
                           view="agenda"
-                          onToggleComplete={handleToggleComplete}
+                          onToggleComplete={() => onToggleComplete(todo)}
                           showDate={true}
                           onClick={() => handleEventEdit(todo)}
                         />
@@ -167,7 +160,7 @@ export function ExpiredTodoList({
                     onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
                   >
-                    上一頁
+                    <ChevronLeftIcon size={16} />
                   </Button>
 
                   <div className="flex items-center gap-1">
@@ -193,7 +186,7 @@ export function ExpiredTodoList({
                     onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
                   >
-                    下一頁
+                    <ChevronRightIcon size={16} />
                   </Button>
                 </div>
               )}
