@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { createFileRoute, useParams } from '@tanstack/react-router';
+import { useCallback, useEffect } from 'react';
+import { createFileRoute, useParams, useNavigate } from '@tanstack/react-router';
 import {
   startOfMonth,
   endOfMonth,
@@ -9,6 +9,9 @@ import {
   endOfDay,
   addDays,
 } from 'date-fns';
+import { toast } from 'sonner';
+
+import { useAuthStore } from '@/features/auth/authStore';
 
 import { EventCalendar } from '@/components/event-calendar';
 import { useCalendarContext } from '@/components/event-calendar/calendar-context';
@@ -22,7 +25,30 @@ export const Route = createFileRoute('/$userId/todo')({
 
 function RouteComponent() {
   const { userId } = useParams({ from: '/$userId/todo' });
+  const navigate = useNavigate();
+  const { checkAuth, profile, isAuthenticated } = useAuthStore();
   const { currentDate, view } = useCalendarContext();
+
+  // 認證檢查
+  useEffect(() => {
+    const handleAuth = async () => {
+      const success = await checkAuth();
+      if (!success || !profile) {
+        // 如果認證失敗，導向首頁
+        navigate({ to: '/' });
+        toast.error('請先登入 LINE 帳號');
+      } else if (profile.userId !== userId) {
+        // 如果 userId 不匹配，導向正確的用戶頁面
+        navigate({ to: `/${profile.userId}/todo` });
+      }
+    };
+
+    if (!isAuthenticated) {
+      handleAuth();
+    } else if (profile && profile.userId !== userId) {
+      navigate({ to: `/${profile.userId}/todo` });
+    }
+  }, [checkAuth, profile, isAuthenticated, userId, navigate]);
 
   const getTimeRange = useCallback(() => {
     let startTime: Date;

@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Copy,
   Check,
+  LogIn,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +16,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 const HomePage = () => {
-  const { profile } = useAuthStore();
+  const { profile, login } = useAuthStore();
   const lineOaId = import.meta.env.VITE_LINEOA_ID;
   const lineUrl = `https://line.me/R/ti/p/@${lineOaId || '640uxald'}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
@@ -137,6 +138,32 @@ const HomePage = () => {
           </Card>
         )}
       </div>
+
+      {/* Login Section for non-authenticated users */}
+      {!profile && (
+        <Card className="mb-6 border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 text-blue-700">
+              <LogIn className="w-6 h-6" />
+              立即登入開始使用
+            </CardTitle>
+            <CardDescription className="text-blue-600">
+              登入後即可享受完整的數位管家服務，包括待辦事項管理和檔案儲存
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button
+              size="lg"
+              onClick={login}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
+            >
+              <LogIn className="w-5 h-5 mr-2" />
+              登入帳號
+            </Button>
+            <p className="text-sm text-blue-500 mt-3">🔒 使用 LINE 帳號安全登入，無需額外註冊</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* LINE Friend Section */}
       <Card className="mb-8">

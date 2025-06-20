@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu, Home, FileText, CheckSquare, ChevronRight, LogOut } from 'lucide-react';
 import { Toaster } from 'sonner';
 
@@ -12,19 +12,21 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { CalendarProvider } from '@/components/event-calendar/calendar-provider';
 
 const RootComponent = () => {
-  const { checkAuth, profile, isAuthenticated, logout } = useAuthStore();
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  const { profile, isAuthenticated, logout, checkAuthWithoutLogin } = useAuthStore();
 
   const search = useSearch({ from: '__root__' }) as { to?: string };
   const navigate = useNavigate();
 
-  if (search.to) {
-    navigate({ to: `/${profile?.userId}/${search.to}` });
+  if (search.to && profile?.userId) {
+    navigate({ to: `/${profile.userId}/${search.to}` });
   }
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  // 在應用程式載入時檢查認證狀態（但不自動登入）
+  useEffect(() => {
+    checkAuthWithoutLogin();
+  }, [checkAuthWithoutLogin]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -55,37 +57,41 @@ const RootComponent = () => {
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </Link>
 
-                <Link
-                  to="/$userId/files"
-                  params={{ userId: profile?.userId || '' }}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors group"
-                  onClick={() => setIsSheetOpen(false)}
-                >
-                  <div className="p-2 rounded-md bg-green-100 text-green-600 group-hover:bg-green-200">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">檔案管理</div>
-                    <div className="text-sm text-muted-foreground">管理您的檔案</div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
+                {isAuthenticated && profile && (
+                  <>
+                    <Link
+                      to="/$userId/files"
+                      params={{ userId: profile?.userId || '' }}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors group"
+                      onClick={() => setIsSheetOpen(false)}
+                    >
+                      <div className="p-2 rounded-md bg-green-100 text-green-600 group-hover:bg-green-200">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">檔案管理</div>
+                        <div className="text-sm text-muted-foreground">管理您的檔案</div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </Link>
 
-                <Link
-                  to="/$userId/todo"
-                  params={{ userId: profile?.userId || '' }}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors group"
-                  onClick={() => setIsSheetOpen(false)}
-                >
-                  <div className="p-2 rounded-md bg-purple-100 text-purple-600 group-hover:bg-purple-200">
-                    <CheckSquare className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">待辦清單</div>
-                    <div className="text-sm text-muted-foreground">管理您的任務</div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
+                    <Link
+                      to="/$userId/todo"
+                      params={{ userId: profile?.userId || '' }}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors group"
+                      onClick={() => setIsSheetOpen(false)}
+                    >
+                      <div className="p-2 rounded-md bg-purple-100 text-purple-600 group-hover:bg-purple-200">
+                        <CheckSquare className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">待辦清單</div>
+                        <div className="text-sm text-muted-foreground">管理您的任務</div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </Link>
+                  </>
+                )}
               </nav>
             </SheetContent>
           </Sheet>
@@ -99,22 +105,26 @@ const RootComponent = () => {
               <Home className="h-4 w-4" />
               首頁
             </Link>
-            <Link
-              to="/$userId/files"
-              params={{ userId: profile?.userId || '' }}
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors [&.active]:bg-accent [&.active]:text-accent-foreground"
-            >
-              <FileText className="h-4 w-4" />
-              檔案管理
-            </Link>
-            <Link
-              to="/$userId/todo"
-              params={{ userId: profile?.userId || '' }}
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors [&.active]:bg-accent [&.active]:text-accent-foreground"
-            >
-              <CheckSquare className="h-4 w-4" />
-              待辦清單
-            </Link>
+            {isAuthenticated && profile && (
+              <>
+                <Link
+                  to="/$userId/files"
+                  params={{ userId: profile?.userId || '' }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors [&.active]:bg-accent [&.active]:text-accent-foreground"
+                >
+                  <FileText className="h-4 w-4" />
+                  檔案管理
+                </Link>
+                <Link
+                  to="/$userId/todo"
+                  params={{ userId: profile?.userId || '' }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors [&.active]:bg-accent [&.active]:text-accent-foreground"
+                >
+                  <CheckSquare className="h-4 w-4" />
+                  待辦清單
+                </Link>
+              </>
+            )}
           </nav>
 
           {/* User Profile */}

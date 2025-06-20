@@ -16,9 +16,11 @@ import {
   X,
   Copy,
 } from 'lucide-react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 import { toast } from 'sonner';
+
+import { useAuthStore } from '@/features/auth/authStore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,6 +103,30 @@ const fileBaseURL = import.meta.env.VITE_FILE_BASE_URL;
 
 const FilesPage = () => {
   const { userId } = Route.useParams();
+  const navigate = useNavigate();
+  const { checkAuth, profile, isAuthenticated } = useAuthStore();
+
+  // 認證檢查
+  useEffect(() => {
+    const handleAuth = async () => {
+      const success = await checkAuth();
+      if (!success || !profile) {
+        // 如果認證失敗，導向首頁
+        navigate({ to: '/' });
+        toast.error('請先登入 LINE 帳號');
+      } else if (profile.userId !== userId) {
+        // 如果 userId 不匹配，導向正確的用戶頁面
+        navigate({ to: `/${profile.userId}/files` });
+      }
+    };
+
+    if (!isAuthenticated) {
+      handleAuth();
+    } else if (profile && profile.userId !== userId) {
+      navigate({ to: `/${profile.userId}/files` });
+    }
+  }, [checkAuth, profile, isAuthenticated, userId, navigate]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isComposing, setIsComposing] = useState(false);
