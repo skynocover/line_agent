@@ -16,11 +16,11 @@ import {
   X,
   Copy,
 } from 'lucide-react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
-import { useAuthStore } from '@/features/auth/authStore';
+import { ProtectedRoute } from '@/features/auth';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,45 +87,11 @@ const getFileTypeColor = (type: string) => {
   return colors[type.toLowerCase()] || 'bg-gray-100 text-gray-800';
 };
 
-// 定義搜索參數的驗證 schema
-const searchSchema = z.object({
-  sort: z.enum(['name', 'type', 'size', 'date']).optional().default('name'),
-  order: z.enum(['asc', 'desc']).optional().default('asc'),
-  page: z.coerce.number().min(1).optional().default(1),
-  filter: z.string().optional(),
-});
-
-// 定義路由參數的驗證 schema
-const paramsSchema = z.object({ userId: z.string().min(1) });
-
 const pageSize = 10;
 const fileBaseURL = import.meta.env.VITE_FILE_BASE_URL;
 
-const FilesPage = () => {
+const FilesPageContent = () => {
   const { userId } = Route.useParams();
-  const navigate = useNavigate();
-  const { checkAuth, profile, isAuthenticated } = useAuthStore();
-
-  // 認證檢查
-  useEffect(() => {
-    const handleAuth = async () => {
-      const success = await checkAuth();
-      if (!success || !profile) {
-        // 如果認證失敗，導向首頁
-        navigate({ to: '/' });
-        toast.error('請先登入 LINE 帳號');
-      } else if (profile.userId !== userId) {
-        // 如果 userId 不匹配，導向正確的用戶頁面
-        navigate({ to: `/${profile.userId}/files` });
-      }
-    };
-
-    if (!isAuthenticated) {
-      handleAuth();
-    } else if (profile && profile.userId !== userId) {
-      navigate({ to: `/${profile.userId}/files` });
-    }
-  }, [checkAuth, profile, isAuthenticated, userId, navigate]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -147,7 +113,7 @@ const FilesPage = () => {
 
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 500); // 增加延遲時間到 1000ms
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchTerm, isComposing]);
@@ -198,53 +164,34 @@ const FilesPage = () => {
   };
 
   const handleRenameSubmit = async () => {
-    if (editingFile && newFileName.trim()) {
-      try {
-        await handleFileNameUpdate({
-          fileId: editingFile.fileId,
-          fileName: newFileName.trim(),
-        });
-        setEditingFile(null);
-        setNewFileName('');
-        toast.success('檔案重新命名成功', {
-          description: `檔案已重新命名為 "${newFileName.trim()}"`,
-          duration: 2000,
-        });
-      } catch (error) {
-        toast.error('重新命名失敗', {
-          description: error instanceof Error ? error.message : '未知錯誤',
-          duration: 3000,
-        });
-      }
+    if (!editingFile || !newFileName.trim()) return;
+
+    try {
+      await handleFileNameUpdate({ fileId: editingFile.fileId, fileName: newFileName.trim() });
+      setEditingFile(null);
+      setNewFileName('');
+      toast.success('檔案名稱更新成功');
+    } catch {
+      toast.error('檔案名稱更新失敗');
     }
   };
 
   const handleDeleteConfirm = async () => {
-    if (deletingFile) {
-      try {
-        await handleFileDelete(deletingFile.fileId);
-        setDeletingFile(null);
-        toast.success('檔案刪除成功', {
-          description: `檔案 "${deletingFile.fileName}" 已成功刪除`,
-          duration: 2000,
-        });
-      } catch (error) {
-        toast.error('刪除檔案失敗', {
-          description: error instanceof Error ? error.message : '未知錯誤',
-          duration: 3000,
-        });
-      }
+    if (!deletingFile) return;
+
+    try {
+      await handleFileDelete(deletingFile.fileId);
+      setDeletingFile(null);
+      toast.success('檔案刪除成功');
+    } catch {
+      toast.error('檔案刪除失敗');
     }
   };
 
   const handleCopyLink = (fileId: string) => {
-    const fileUrl = `${fileBaseURL}/${userId}/${fileId}`;
-    navigator.clipboard.writeText(fileUrl).then(() => {
-      toast.success('已複製檔案連結', {
-        description: '檔案連結已複製到剪貼簿',
-        duration: 2000,
-      });
-    });
+    const link = `${fileBaseURL}/${userId}/${fileId}`;
+    navigator.clipboard.writeText(link);
+    toast.success('檔案連結已複製到剪貼簿');
   };
 
   const handleUploadClick = () => {
@@ -255,23 +202,18 @@ const FilesPage = () => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    const file = files[0];
-
     try {
-      await handleFileUpload(file);
-      toast.success('檔案上傳成功', {
-        description: `檔案 "${file.name}" 已成功上傳`,
-        duration: 3000,
-      });
-      // 清空 input 以允許重複上傳同一個檔案
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      for (const file of Array.from(files)) {
+        await handleFileUpload(file);
       }
-    } catch (error) {
-      toast.error('檔案上傳失敗', {
-        description: error instanceof Error ? error.message : '未知錯誤',
-        duration: 3000,
-      });
+      toast.success(`成功上傳 ${files.length} 個檔案`);
+    } catch {
+      toast.error('檔案上傳失敗');
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -282,19 +224,13 @@ const FilesPage = () => {
     const files = event.dataTransfer.files;
     if (!files || files.length === 0) return;
 
-    const file = files[0];
-
     try {
-      await handleFileUpload(file);
-      toast.success('檔案上傳成功', {
-        description: `檔案 "${file.name}" 已成功上傳`,
-        duration: 3000,
-      });
-    } catch (error) {
-      toast.error('檔案上傳失敗', {
-        description: error instanceof Error ? error.message : '未知錯誤',
-        duration: 3000,
-      });
+      for (const file of Array.from(files)) {
+        await handleFileUpload(file);
+      }
+      toast.success(`成功上傳 ${files.length} 個檔案`);
+    } catch {
+      toast.error('檔案上傳失敗');
     }
   };
 
@@ -305,397 +241,360 @@ const FilesPage = () => {
 
   const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    setIsDragOver(false);
+    if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
   };
 
-  useEffect(() => {
-    if (error) {
-      console.error('Error fetching files:', error);
-      toast.error('載入檔案失敗', {
-        description: '無法載入檔案，錯誤:' + error.message,
-      });
-    }
-  }, [error]);
-
-  if (isLoading) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center text-red-600">
+          <p>載入檔案時發生錯誤：{typeof error === 'string' ? error : '未知錯誤'}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className={`h-[calc(100vh-70px)] bg-gray-50 ${
-        isDragOver ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''
-      }`}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-    >
-      {/* 頂部導航 */}
-      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">我的雲端硬碟</h1>
-        </div>
-      </header>
-
-      {/* 工具列 */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="w-full sm:w-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="搜尋檔案..."
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                onCompositionStart={() => setIsComposing(true)}
-                onCompositionEnd={() => setIsComposing(false)}
-                className="pl-10 w-full sm:w-80"
-                autoFocus
-              />
-              {searchTerm && (
-                <button
-                  onClick={handleClearSearch}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+    <div className="container mx-auto px-4 py-6">
+      <div
+        className={`max-w-7xl mx-auto transition-all duration-200 ${
+          isDragOver ? 'bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-4' : ''
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        {isDragOver && (
+          <div className="text-center text-blue-600 mb-4">
+            <Upload className="w-8 h-8 mx-auto mb-2" />
+            <p className="text-lg font-medium">拖放檔案到這裡上傳</p>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-              accept="*/*"
-            />
-            <Button
-              onClick={handleUploadClick}
-              disabled={uploadFileMutation.isPending}
-              className="flex items-center gap-2 w-full sm:w-auto"
-            >
+        )}
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">檔案管理</h1>
+            <p className="text-gray-600 mt-1">管理您上傳的檔案</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={handleUploadClick} className="flex items-center gap-2">
               <Upload className="w-4 h-4" />
-              {uploadFileMutation.isPending ? '上傳中...' : '上傳檔案'}
+              上傳檔案
             </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* 檔案列表 */}
-      <main className="px-4 sm:px-6 py-4 sm:py-6">
-        <div className="bg-white rounded-lg shadow">
-          {/* 桌面版表格 */}
-          <div className="hidden sm:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => handleSortChange('name')}
-                  >
-                    <div className="flex items-center gap-2">
-                      檔案名稱
-                      {sort === 'name' && (
-                        <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => handleSortChange('type')}
-                  >
-                    <div className="flex items-center gap-2">
-                      類型
-                      {sort === 'type' && (
-                        <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => handleSortChange('size')}
-                  >
-                    <div className="flex items-center gap-2">
-                      大小
-                      {sort === 'size' && (
-                        <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => handleSortChange('date')}
-                  >
-                    <div className="flex items-center gap-2">
-                      上傳日期
-                      {sort === 'date' && (
-                        <span className="text-gray-400">{order === 'asc' ? '↑' : '↓'}</span>
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead className="w-24">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {files.map(({ fileId, fileName, fileSize, createdAt }) => (
-                  <TableRow key={fileId} className="hover:bg-gray-50">
-                    <TableCell>{getFileIcon(getFileCategory(getFileType(fileName)))}</TableCell>
-                    <TableCell>
-                      <a
-                        href={`${fileBaseURL}/${userId}/${fileId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                      >
-                        {fileName}
-                      </a>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={getFileTypeColor(getFileType(fileName))}
-                      >
-                        {getFileType(fileName).toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-gray-600">{formatFileSize(fileSize)}</TableCell>
-                    <TableCell className="text-gray-600">
-                      {createdAt ? new Date(createdAt).toLocaleString() : ''}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyLink(fileId)}
-                          className="hover:bg-gray-100"
-                          title="複製檔案連結"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {}}
-                          className="hover:bg-gray-100"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRename({ fileId, fileName })}
-                          className="hover:bg-gray-100"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete({ fileId, fileName })}
-                          className="hover:bg-gray-100"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* 手機版列表 */}
-          <div className="sm:hidden">
-            {files.map(({ fileId, fileName, fileSize, createdAt }) => (
-              <div
-                key={fileId}
-                className="p-4 border-b border-gray-200 last:border-b-0 hover:bg-gray-50"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-1">{getFileIcon(getFileCategory(getFileType(fileName)))}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <a
-                        href={`${fileBaseURL}/${userId}/${fileId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 font-medium truncate hover:text-blue-800 hover:underline"
-                      >
-                        {fileName}
-                      </a>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyLink(fileId)}
-                          className="h-8 w-8 p-0"
-                          title="複製檔案連結"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {}}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRename({ fileId, fileName })}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete({ fileId, fileName })}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-gray-600">
-                      <Badge
-                        variant="secondary"
-                        className={getFileTypeColor(getFileType(fileName))}
-                      >
-                        {getFileType(fileName).toUpperCase()}
-                      </Badge>
-                      <span>{formatFileSize(fileSize)}</span>
-                      <span>{createdAt ? new Date(createdAt).toLocaleString() : ''}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {files.length === 0 && (
-            <div className="text-center py-12">
-              <File className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">找不到符合條件的檔案</p>
-            </div>
-          )}
-
-          {/* 分頁組件 */}
-          {files.length > 0 && pagination && (
-            <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setPage(page - 1)}
-                  disabled={page === 1}
-                  className="h-8 w-8"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="text-sm text-gray-600">
-                  {page}/{pagination.totalPages}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setPage(page + 1)}
-                  disabled={page === pagination.totalPages}
-                  className="h-8 w-8"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-
-      {/* 拖放上傳提示 */}
-      {isDragOver && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-white rounded-lg p-8 shadow-xl">
-            <div className="text-center">
-              <Upload className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">放開檔案以上傳</h3>
-              <p className="text-gray-600">將檔案拖放到此處即可上傳</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 重新命名對話框 */}
-      <Dialog open={!!editingFile} onOpenChange={() => setEditingFile(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>重新命名檔案</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              value={newFileName}
-              onChange={(e) => setNewFileName(e.target.value)}
-              placeholder="輸入新的檔案名稱"
-              autoFocus
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
             />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingFile(null)}>
-              取消
-            </Button>
-            <Button onClick={handleRenameSubmit} disabled={!newFileName.trim()}>
-              確認
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
 
-      {/* 刪除確認對話框 */}
-      <AlertDialog open={!!deletingFile} onOpenChange={() => setDeletingFile(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>確認刪除</AlertDialogTitle>
-            <AlertDialogDescription>
-              您確定要刪除檔案 "{deletingFile?.fileName}" 嗎？此操作無法復原。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
+        {/* Search and Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="搜尋檔案名稱..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={() => setIsComposing(false)}
+              className="pl-10 pr-10"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSearch}
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Files Table */}
+        <div className="bg-white rounded-lg border shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">#</TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-gray-50 select-none"
+                  onClick={() => handleSortChange('name')}
+                >
+                  <div className="flex items-center gap-1">
+                    檔案名稱
+                    {sort === 'name' && (
+                      <span className="text-xs">{order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-gray-50 select-none"
+                  onClick={() => handleSortChange('type')}
+                >
+                  <div className="flex items-center gap-1">
+                    類型
+                    {sort === 'type' && (
+                      <span className="text-xs">{order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-gray-50 select-none"
+                  onClick={() => handleSortChange('size')}
+                >
+                  <div className="flex items-center gap-1">
+                    大小
+                    {sort === 'size' && (
+                      <span className="text-xs">{order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-gray-50 select-none"
+                  onClick={() => handleSortChange('date')}
+                >
+                  <div className="flex items-center gap-1">
+                    上傳時間
+                    {sort === 'date' && (
+                      <span className="text-xs">{order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead className="w-32">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                      <span className="ml-2">載入中...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : files.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                    {searchTerm ? '沒有找到符合條件的檔案' : '還沒有上傳任何檔案'}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                files.map((file, index) => {
+                  const fileType = getFileType(file.fileName);
+                  const category = getFileCategory(file.fileName);
+
+                  return (
+                    <TableRow key={file.fileId} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">
+                        {(page - 1) * pageSize + index + 1}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {getFileIcon(category)}
+                          <div>
+                            <div className="font-medium text-gray-900 break-all">
+                              {file.fileName}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={getFileTypeColor(fileType)}>
+                          {fileType.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-600">
+                        {formatFileSize(file.fileSize)}
+                      </TableCell>
+                      <TableCell className="text-gray-600">
+                        {new Date(file.createdAt || '').toLocaleString('zh-TW')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              window.open(`${fileBaseURL}/${userId}/${file.fileId}`, '_blank')
+                            }
+                            title="下載檔案"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopyLink(file.fileId)}
+                            title="複製連結"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleRename({ fileId: file.fileId, fileName: file.fileName })
+                            }
+                            title="重新命名"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDelete({ fileId: file.fileId, fileName: file.fileName })
+                            }
+                            title="刪除檔案"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page - 1)}
+              disabled={page <= 1}
             >
-              刪除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <ChevronLeft className="w-4 h-4" />
+              上一頁
+            </Button>
+
+            <div className="flex items-center gap-2">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(pagination.totalPages - 4, page - 2)) + i;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={pageNum === page ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPage(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page + 1)}
+              disabled={page >= pagination.totalPages}
+            >
+              下一頁
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Upload Progress */}
+        {uploadFileMutation.isPending && (
+          <div className="fixed bottom-4 right-4 bg-white border rounded-lg shadow-lg p-4">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-sm">檔案上傳中...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Rename Dialog */}
+        <Dialog open={!!editingFile} onOpenChange={() => setEditingFile(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>重新命名檔案</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">檔案名稱</label>
+                <Input
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  placeholder="請輸入新的檔案名稱"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingFile(null)}>
+                取消
+              </Button>
+              <Button onClick={handleRenameSubmit} disabled={!newFileName.trim()}>
+                確認
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deletingFile} onOpenChange={() => setDeletingFile(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>確認刪除檔案</AlertDialogTitle>
+              <AlertDialogDescription>
+                您確定要刪除檔案「{deletingFile?.fileName}」嗎？此操作無法復原。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                刪除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 };
 
+const FilesPage = () => {
+  const { userId } = Route.useParams();
+
+  return (
+    <ProtectedRoute
+      requiredUserId={userId}
+      redirectTo="/files"
+      showErrorToast={true}
+      autoLogin={true}
+    >
+      <FilesPageContent />
+    </ProtectedRoute>
+  );
+};
+
 export const Route = createFileRoute('/$userId/files')({
-  parseParams: (params) => paramsSchema.parse(params),
-  validateSearch: searchSchema,
-  beforeLoad: async () => {},
-  loader: async () => {},
-  errorComponent: ({ error }) => (
-    <div className="p-4 text-red-600">
-      <h2>Error loading files</h2>
-      <p>{error.message}</p>
-    </div>
-  ),
-  pendingComponent: () => <div className="p-4">Loading files...</div>,
   component: FilesPage,
+  validateSearch: z.object({
+    sort: z.enum(['name', 'type', 'size', 'date']).optional().default('name'),
+    order: z.enum(['asc', 'desc']).optional().default('asc'),
+    page: z.coerce.number().min(1).optional().default(1),
+    filter: z.string().optional(),
+  }),
 });

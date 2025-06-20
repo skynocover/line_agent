@@ -5,32 +5,127 @@ import { Toaster } from 'sonner';
 import { createRootRoute, Outlet, Link, useSearch, useNavigate } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 
-import { useAuthStore } from '@/features/auth/authStore';
+import { useAuthStore } from '@/features/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { CalendarProvider } from '@/components/event-calendar/calendar-provider';
 
 const RootComponent = () => {
-  const { profile, isAuthenticated, logout, checkAuthWithoutLogin } = useAuthStore();
+  const { profile, isAuthenticated, isLoading, logout, refreshAuthState } = useAuthStore();
 
   const search = useSearch({ from: '__root__' }) as { to?: string };
   const navigate = useNavigate();
-
-  if (search.to && profile?.userId) {
-    navigate({ to: `/${profile.userId}/${search.to}` });
-  }
-
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // 在應用程式載入時檢查認證狀態（但不自動登入）
+  // 處理帶有 'to' 參數的 URL 重定向
   useEffect(() => {
-    checkAuthWithoutLogin();
-  }, [checkAuthWithoutLogin]);
+    if (search.to && profile?.userId) {
+      const targetPath = `/${profile.userId}/${search.to}`;
+      navigate({ to: targetPath });
+    }
+  }, [search.to, profile?.userId, navigate]);
+
+  // 在應用程式載入時檢查認證狀態
+  useEffect(() => {
+    refreshAuthState();
+  }, [refreshAuthState]);
+
+  // 處理登出
+  const handleLogout = async () => {
+    await logout();
+    setIsSheetOpen(false);
+    navigate({ to: '/' });
+  };
+
+  // 導航項目配置
+  const navigationItems = [
+    {
+      to: '/' as const,
+      icon: Home,
+      label: '首頁',
+      description: '回到主頁面',
+      color: 'blue',
+      requireAuth: false,
+    },
+    {
+      to: '/$userId/files' as const,
+      icon: FileText,
+      label: '檔案管理',
+      description: '管理您的檔案',
+      color: 'green',
+      requireAuth: true,
+    },
+    {
+      to: '/$userId/todo' as const,
+      icon: CheckSquare,
+      label: '待辦清單',
+      description: '管理您的任務',
+      color: 'purple',
+      requireAuth: true,
+    },
+  ];
+
+  // 渲染導航項目
+  const renderNavItem = (item: (typeof navigationItems)[0], isMobile = false) => {
+    const IconComponent = item.icon;
+    const colorClasses = {
+      blue: 'bg-blue-100 text-blue-600 group-hover:bg-blue-200',
+      green: 'bg-green-100 text-green-600 group-hover:bg-green-200',
+      purple: 'bg-purple-100 text-purple-600 group-hover:bg-purple-200',
+    };
+
+    // 如果需要認證但用戶未登入，不顯示該項目
+    if (item.requireAuth && !isAuthenticated) {
+      return null;
+    }
+
+    const linkProps =
+      item.to === '/'
+        ? { to: item.to }
+        : {
+            to: item.to,
+            params: { userId: profile?.userId || '' },
+          };
+
+    if (isMobile) {
+      return (
+        <Link
+          key={item.label}
+          {...linkProps}
+          className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors group"
+          onClick={() => setIsSheetOpen(false)}
+        >
+          <div
+            className={`p-2 rounded-md ${colorClasses[item.color as keyof typeof colorClasses]}`}
+          >
+            <IconComponent className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <div className="font-medium">{item.label}</div>
+            <div className="text-sm text-muted-foreground">{item.description}</div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+      );
+    }
+
+    return (
+      <Link
+        key={item.label}
+        {...linkProps}
+        className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors [&.active]:bg-accent [&.active]:text-accent-foreground"
+      >
+        <IconComponent className="h-4 w-4" />
+        {item.label}
+      </Link>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <Toaster position="top-right" />
+
       {/* Mobile Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-14 items-center">
@@ -42,89 +137,14 @@ const RootComponent = () => {
             </SheetTrigger>
             <SheetContent side="left" className="w-[300px] sm:w-[400px]">
               <nav className="flex flex-col gap-2 mt-4">
-                <Link
-                  to="/"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors group"
-                  onClick={() => setIsSheetOpen(false)}
-                >
-                  <div className="p-2 rounded-md bg-blue-100 text-blue-600 group-hover:bg-blue-200">
-                    <Home className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">首頁</div>
-                    <div className="text-sm text-muted-foreground">回到主頁面</div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-
-                {isAuthenticated && profile && (
-                  <>
-                    <Link
-                      to="/$userId/files"
-                      params={{ userId: profile?.userId || '' }}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors group"
-                      onClick={() => setIsSheetOpen(false)}
-                    >
-                      <div className="p-2 rounded-md bg-green-100 text-green-600 group-hover:bg-green-200">
-                        <FileText className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">檔案管理</div>
-                        <div className="text-sm text-muted-foreground">管理您的檔案</div>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </Link>
-
-                    <Link
-                      to="/$userId/todo"
-                      params={{ userId: profile?.userId || '' }}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors group"
-                      onClick={() => setIsSheetOpen(false)}
-                    >
-                      <div className="p-2 rounded-md bg-purple-100 text-purple-600 group-hover:bg-purple-200">
-                        <CheckSquare className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">待辦清單</div>
-                        <div className="text-sm text-muted-foreground">管理您的任務</div>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </Link>
-                  </>
-                )}
+                {navigationItems.map((item) => renderNavItem(item, true))}
               </nav>
             </SheetContent>
           </Sheet>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex gap-2 ml-6">
-            <Link
-              to="/"
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors [&.active]:bg-accent [&.active]:text-accent-foreground"
-            >
-              <Home className="h-4 w-4" />
-              首頁
-            </Link>
-            {isAuthenticated && profile && (
-              <>
-                <Link
-                  to="/$userId/files"
-                  params={{ userId: profile?.userId || '' }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors [&.active]:bg-accent [&.active]:text-accent-foreground"
-                >
-                  <FileText className="h-4 w-4" />
-                  檔案管理
-                </Link>
-                <Link
-                  to="/$userId/todo"
-                  params={{ userId: profile?.userId || '' }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors [&.active]:bg-accent [&.active]:text-accent-foreground"
-                >
-                  <CheckSquare className="h-4 w-4" />
-                  待辦清單
-                </Link>
-              </>
-            )}
+            {navigationItems.map((item) => renderNavItem(item, false))}
           </nav>
 
           {/* User Profile */}
@@ -138,7 +158,13 @@ const RootComponent = () => {
                 <AvatarImage src={profile.pictureUrl} alt={profile.displayName} />
                 <AvatarFallback>{profile.displayName?.charAt(0)}</AvatarFallback>
               </Avatar>
-              <Button variant="ghost" size="icon" onClick={logout} title="Logout">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                title="Logout"
+                disabled={isLoading}
+              >
                 <LogOut className="h-5 w-5" />
               </Button>
             </div>
@@ -151,6 +177,7 @@ const RootComponent = () => {
           <Outlet />
         </CalendarProvider>
       </main>
+
       <TanStackRouterDevtools />
     </div>
   );

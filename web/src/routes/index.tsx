@@ -8,15 +8,16 @@ import {
   Copy,
   Check,
   LogIn,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore } from '@/features/auth/authStore';
+import { useAuthStore } from '@/features/auth';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
 const HomePage = () => {
-  const { profile, login } = useAuthStore();
+  const { profile, login, isLoading, error, refreshAuthState } = useAuthStore();
   const lineOaId = import.meta.env.VITE_LINEOA_ID;
   const lineUrl = `https://line.me/R/ti/p/@${lineOaId || '640uxald'}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
@@ -36,6 +37,33 @@ const HomePage = () => {
     }
   };
 
+  const handleLogin = async () => {
+    try {
+      await login();
+      if (profile) {
+        toast.success(`歡迎回來，${profile.displayName}！`);
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+      // 如果不是重定向錯誤，顯示錯誤提示
+      if (error instanceof Error && error.message !== 'Login redirect required') {
+        toast.error('登入失敗，請稍後再試');
+      }
+    }
+  };
+
+  const handleRefreshAuth = async () => {
+    try {
+      await refreshAuthState();
+      if (profile) {
+        toast.success('認證狀態已更新');
+      }
+    } catch (error) {
+      console.error('Refresh auth failed:', error);
+      toast.error('更新認證狀態失敗');
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       {/* Hero Section */}
@@ -44,6 +72,16 @@ const HomePage = () => {
           🤖 數位管家
         </h1>
         <p className="text-xl text-muted-foreground mb-6">您的智能生活助手，讓日常管理更簡單！</p>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-red-600 text-sm">{error}</p>
+            <Button variant="outline" size="sm" onClick={handleRefreshAuth} className="mt-2">
+              重試
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Features Section */}
@@ -139,6 +177,42 @@ const HomePage = () => {
         )}
       </div>
 
+      {/* User Welcome Section for authenticated users */}
+      {profile && (
+        <Card className="mb-6 border-green-200 bg-gradient-to-r from-green-50 to-blue-50">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 text-green-700">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckSquare className="w-5 h-5 text-green-600" />
+              </div>
+              歡迎回來，{profile.displayName}！
+            </CardTitle>
+            <CardDescription className="text-green-600">
+              您已成功登入，現在可以使用所有功能了
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <div className="flex justify-center gap-4">
+              <Link to="/$userId/todo" params={{ userId: profile.userId }}>
+                <Button className="bg-purple-600 hover:bg-purple-700">
+                  <CheckSquare className="w-4 h-4 mr-2" />
+                  待辦事項
+                </Button>
+              </Link>
+              <Link to="/$userId/files" params={{ userId: profile.userId }}>
+                <Button
+                  variant="outline"
+                  className="border-green-600 text-green-600 hover:bg-green-50"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  檔案管理
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Login Section for non-authenticated users */}
       {!profile && (
         <Card className="mb-6 border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50">
@@ -154,11 +228,21 @@ const HomePage = () => {
           <CardContent className="text-center">
             <Button
               size="lg"
-              onClick={login}
+              onClick={handleLogin}
+              disabled={isLoading}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
             >
-              <LogIn className="w-5 h-5 mr-2" />
-              登入帳號
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  登入中...
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5 mr-2" />
+                  登入帳號
+                </>
+              )}
             </Button>
             <p className="text-sm text-blue-500 mt-3">🔒 使用 LINE 帳號安全登入，無需額外註冊</p>
           </CardContent>
@@ -229,11 +313,13 @@ const HomePage = () => {
       </Card>
 
       {/* Footer */}
-      {!profile && (
-        <div className="text-center text-sm text-muted-foreground">
+      <div className="text-center text-sm text-muted-foreground">
+        {profile ? (
+          <p>🎉 您已成功登入！現在可使用所有功能</p>
+        ) : (
           <p>💡 提示：登入後可使用完整功能，包括檔案管理和待辦事項同步</p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
