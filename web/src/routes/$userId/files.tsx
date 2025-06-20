@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useFiles } from '@/features/files/hooks';
+import { getFileCategory, getFileType, formatFileSize } from '@/features/files/utils';
 
 // 根據檔案類型返回對應圖示
 const getFileIcon = (category: string) => {
@@ -82,40 +83,6 @@ const getFileTypeColor = (type: string) => {
     docx: 'bg-blue-100 text-blue-800',
   };
   return colors[type.toLowerCase()] || 'bg-gray-100 text-gray-800';
-};
-
-// 獲取檔案類型
-const getFileType = (filename: string): string => {
-  const extension = filename.split('.').pop()?.toLowerCase();
-  return extension || 'unknown';
-};
-
-// 獲取檔案類別
-const getFileCategory = (type: string): string => {
-  const categories: Record<string, string> = {
-    pdf: 'document',
-    docx: 'document',
-    xlsx: 'document',
-    jpg: 'image',
-    jpeg: 'image',
-    png: 'image',
-    mp3: 'audio',
-    wav: 'audio',
-    mp4: 'video',
-    mov: 'video',
-    zip: 'archive',
-    rar: 'archive',
-  };
-  return categories[type] || 'other';
-};
-
-// 格式化檔案大小
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
 // 定義搜索參數的驗證 schema
@@ -218,22 +185,21 @@ const FilesPage = () => {
     });
   };
 
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching files:', error);
+      toast.error('載入檔案失敗', {
+        description: '無法載入檔案，錯誤:' + error.message,
+      });
+    }
+  }, [error]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
           <p className="mt-4 text-gray-600">載入中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">載入失敗：{error.message}</p>
         </div>
       </div>
     );
