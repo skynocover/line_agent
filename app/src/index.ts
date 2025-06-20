@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { R2Bucket, D1Database } from '@cloudflare/workers-types';
 import { fileTypeFromBuffer } from 'file-type';
 import { cors } from 'hono/cors';
+import axios from 'axios';
 
 import { createDb } from '../db';
 import { downloadFile, replyMessage } from '../lib/line';
@@ -12,6 +13,7 @@ import { FileController } from './files/controller';
 import calendarEvents from './calendar-events/routes';
 import { CalendarEventController } from './calendar-events/controller';
 import { createEventWithAI } from '../lib/ai';
+import { verifyLiffAccessToken, verifyUserIdMatch } from './middlewares/verify';
 
 export type Bindings = {
   APP_STORAGE: R2Bucket;
@@ -37,6 +39,10 @@ app.get('/echo', (c) => {
   const { name } = c.req.query();
   return c.text(`Hello ${name}`);
 });
+
+// Apply LIFF verification to API routes
+// Apply user ID verification to routes with userId parameter
+app.use('/api/:userId/*', verifyLiffAccessToken, verifyUserIdMatch);
 
 // Mount file routes
 app.route('/api', filesRoutes);
@@ -79,7 +85,7 @@ app.get('/:userId/:fileId', async (c) => {
   }
 });
 
-app.post('/api/webhook', async (c) => {
+app.post('/webhook', async (c) => {
   const accessToken = c.env.LINE_ACCESS_TOKEN;
   const APP_STORAGE = c.env.APP_STORAGE;
   const googleApiKey = c.env.GOOGLE_AI_API_KEY;

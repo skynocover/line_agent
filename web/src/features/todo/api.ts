@@ -1,6 +1,7 @@
 import type { CalendarEvent } from '@/components/event-calendar/types';
 import axios from 'axios';
 import type { NewCalendarEvent } from '../../../../app/db/schema';
+import { getAuthHeaders } from '../line/liff';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL + '/api';
 
@@ -32,6 +33,7 @@ export const getEvents = async (
         startTime: params?.startTime,
         endTime: params?.endTime,
       },
+      headers: getAuthHeaders(),
     });
     return data;
   } catch (error) {
@@ -48,7 +50,10 @@ export const createEvent = async (
 ): Promise<CalendarEvent> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/${userId}/events`, event, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
     });
     return response.data;
   } catch (error) {
@@ -66,7 +71,10 @@ export const updateEvent = async (
 ): Promise<CalendarEvent> => {
   try {
     const response = await axios.patch(`${API_BASE_URL}/${userId}/events/${eventId}`, event, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
     });
     return response.data;
   } catch (error) {
@@ -79,7 +87,9 @@ export const updateEvent = async (
 
 export const deleteEvent = async (userId: string, eventId: number): Promise<void> => {
   try {
-    await axios.delete(`${API_BASE_URL}/${userId}/events/${eventId}`);
+    await axios.delete(`${API_BASE_URL}/${userId}/events/${eventId}`, {
+      headers: getAuthHeaders(),
+    });
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.data) {
       throw new Error(error.response.data.error);
@@ -97,7 +107,9 @@ export const getIncompleteExpiredEvents = async (
   userId: string,
 ): Promise<GetIncompleteExpiredEventsResponse> => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/${userId}/events/incomplete-expired`);
+    const { data } = await axios.get(`${API_BASE_URL}/${userId}/events/incomplete-expired`, {
+      headers: getAuthHeaders(),
+    });
     return data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.data) {

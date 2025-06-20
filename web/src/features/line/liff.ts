@@ -1,4 +1,5 @@
 import liff from '@line/liff';
+import { useAuthStore } from '../auth/authStore';
 
 const liffId = import.meta.env.VITE_LIFF_ID;
 
@@ -39,5 +40,10 @@ const handleLogout = (): void => {
   liff.logout();
 };
 
-export { initLiff, handleLogin, handleLogout };
+const getAuthHeaders = () => {
+  const accessToken = useAuthStore.getState().accessToken;
+  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+};
+
+export { initLiff, handleLogin, handleLogout, getAuthHeaders };
 export type { ILiffProfile };
