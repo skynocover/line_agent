@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type { CalendarEvent } from '@/components/event-calendar/types';
 import {
   getEvents,
@@ -103,6 +104,9 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
         queryClient.setQueryData(incompleteExpiredQueryKey, context.previousExpiredTodos);
       }
       console.error('Error creating event:', error);
+      toast.error('建立待辦事項失敗', {
+        description: '無法建立待辦事項，錯誤:' + error.message,
+      });
     },
   });
 
@@ -156,6 +160,9 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
         queryClient.setQueryData(incompleteExpiredQueryKey, context.previousExpiredTodos);
       }
       console.error('Error updating event:', error);
+      toast.error('更新待辦事項失敗', {
+        description: '無法更新待辦事項，錯誤:' + error.message,
+      });
     },
   });
 
@@ -193,6 +200,9 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
         queryClient.setQueryData(incompleteExpiredQueryKey, context.previousExpiredTodos);
       }
       console.error('Error deleting event:', error);
+      toast.error('刪除待辦事項失敗', {
+        description: '無法刪除待辦事項，錯誤:' + error.message,
+      });
     },
   });
 
@@ -246,6 +256,26 @@ export function useTodos({ userId, currentDate, view, getTimeRange }: UseTodosOp
     },
     enabled: !!userId,
   });
+
+  // Handle main todos query error
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching todos:', error);
+      toast.error('載入待辦事項失敗', {
+        description: '無法載入待辦事項，錯誤:' + error.message,
+      });
+    }
+  }, [error]);
+
+  // Handle incomplete expired todos query error
+  useEffect(() => {
+    if (errorIncompleteExpiredTodos) {
+      console.error('Error fetching incomplete expired todos:', errorIncompleteExpiredTodos);
+      toast.error('載入過期待辦事項失敗', {
+        description: '無法載入過期的待辦事項，錯誤:' + errorIncompleteExpiredTodos.message,
+      });
+    }
+  }, [errorIncompleteExpiredTodos]);
 
   return {
     // Data

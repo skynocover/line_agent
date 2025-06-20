@@ -33,13 +33,16 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-app.get('/', (c) => {
-  return c.text('Hello World!');
+app.get('/echo', (c) => {
+  const { name } = c.req.query();
+  return c.text(`Hello ${name}`);
 });
 
 // Mount file routes
 app.route('/api', filesRoutes);
 app.route('/api', calendarEvents);
+
+// TODO: log製作
 
 app.get('/:userId/:fileId', async (c) => {
   if (c.env.ENV !== 'local') {
