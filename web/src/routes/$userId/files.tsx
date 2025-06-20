@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   ImageIcon,
@@ -112,6 +112,8 @@ const FilesPage = () => {
     null,
   );
   const [newFileName, setNewFileName] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Add debounce effect
   useEffect(() => {
@@ -124,7 +126,16 @@ const FilesPage = () => {
     return () => clearTimeout(timer);
   }, [searchTerm, isComposing]);
 
-  const { files, pagination, isLoading, error, handleFileDelete, handleFileNameUpdate } = useFiles({
+  const {
+    files,
+    pagination,
+    isLoading,
+    error,
+    handleFileDelete,
+    handleFileNameUpdate,
+    handleFileUpload,
+    uploadFileMutation,
+  } = useFiles({
     userId,
     page,
     limit: pageSize,
@@ -160,18 +171,43 @@ const FilesPage = () => {
     setDeletingFile(file);
   };
 
-  const handleRenameSubmit = () => {
+  const handleRenameSubmit = async () => {
     if (editingFile && newFileName.trim()) {
-      handleFileNameUpdate({
-        fileId: editingFile.fileId,
-        fileName: newFileName.trim(),
-      });
+      try {
+        await handleFileNameUpdate({
+          fileId: editingFile.fileId,
+          fileName: newFileName.trim(),
+        });
+        setEditingFile(null);
+        setNewFileName('');
+        toast.success('檔案重新命名成功', {
+          description: `檔案已重新命名為 "${newFileName.trim()}"`,
+          duration: 2000,
+        });
+      } catch (error) {
+        toast.error('重新命名失敗', {
+          description: error instanceof Error ? error.message : '未知錯誤',
+          duration: 3000,
+        });
+      }
     }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deletingFile) {
-      handleFileDelete(deletingFile.fileId);
+      try {
+        await handleFileDelete(deletingFile.fileId);
+        setDeletingFile(null);
+        toast.success('檔案刪除成功', {
+          description: `檔案 "${deletingFile.fileName}" 已成功刪除`,
+          duration: 2000,
+        });
+      } catch (error) {
+        toast.error('刪除檔案失敗', {
+          description: error instanceof Error ? error.message : '未知錯誤',
+          duration: 3000,
+        });
+      }
     }
   };
 
@@ -183,6 +219,67 @@ const FilesPage = () => {
         duration: 2000,
       });
     });
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    try {
+      await handleFileUpload(file);
+      toast.success('檔案上傳成功', {
+        description: `檔案 "${file.name}" 已成功上傳`,
+        duration: 3000,
+      });
+      // 清空 input 以允許重複上傳同一個檔案
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      toast.error('檔案上傳失敗', {
+        description: error instanceof Error ? error.message : '未知錯誤',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+
+    const files = event.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    try {
+      await handleFileUpload(file);
+      toast.success('檔案上傳成功', {
+        description: `檔案 "${file.name}" 已成功上傳`,
+        duration: 3000,
+      });
+    } catch (error) {
+      toast.error('檔案上傳失敗', {
+        description: error instanceof Error ? error.message : '未知錯誤',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
   };
 
   useEffect(() => {
@@ -206,7 +303,14 @@ const FilesPage = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-70px)] bg-gray-50">
+    <div
+      className={`h-[calc(100vh-70px)] bg-gray-50 ${
+        isDragOver ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''
+      }`}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+    >
       {/* 頂部導航 */}
       <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
@@ -240,9 +344,20 @@ const FilesPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button className="flex items-center gap-2 w-full sm:w-auto">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              accept="*/*"
+            />
+            <Button
+              onClick={handleUploadClick}
+              disabled={uploadFileMutation.isPending}
+              className="flex items-center gap-2 w-full sm:w-auto"
+            >
               <Upload className="w-4 h-4" />
-              上傳檔案
+              {uploadFileMutation.isPending ? '上傳中...' : '上傳檔案'}
             </Button>
           </div>
         </div>
@@ -481,6 +596,19 @@ const FilesPage = () => {
           )}
         </div>
       </main>
+
+      {/* 拖放上傳提示 */}
+      {isDragOver && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-white rounded-lg p-8 shadow-xl">
+            <div className="text-center">
+              <Upload className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">放開檔案以上傳</h3>
+              <p className="text-gray-600">將檔案拖放到此處即可上傳</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 重新命名對話框 */}
       <Dialog open={!!editingFile} onOpenChange={() => setEditingFile(null)}>

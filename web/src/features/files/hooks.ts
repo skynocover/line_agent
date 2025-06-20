@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getFiles, deleteFile, updateFileName } from './api';
+import { getFiles, deleteFile, updateFileName, uploadFile } from './api';
 
 interface UseFilesOptions {
   userId: string;
@@ -62,6 +62,18 @@ export function useFiles({
     },
   });
 
+  // Upload file mutation
+  const uploadFileMutation = useMutation({
+    mutationFn: (file: globalThis.File) => uploadFile(userId, file),
+    onSuccess: () => {
+      // Invalidate and refetch the files query
+      queryClient.invalidateQueries({ queryKey: ['files', userId] });
+    },
+    onError: (error) => {
+      console.error('Error uploading file:', error);
+    },
+  });
+
   // Event handlers
   const handleFileDelete = useCallback(
     async (fileId: string) => {
@@ -87,6 +99,18 @@ export function useFiles({
     [updateFileNameMutation],
   );
 
+  const handleFileUpload = useCallback(
+    async (file: globalThis.File) => {
+      try {
+        await uploadFileMutation.mutateAsync(file);
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        throw error; // Re-throw to let UI handle the error
+      }
+    },
+    [uploadFileMutation],
+  );
+
   return {
     // Data
     files: data?.data || [],
@@ -97,10 +121,12 @@ export function useFiles({
     // Mutations
     deleteFileMutation,
     updateFileNameMutation,
+    uploadFileMutation,
 
     // Handlers
     handleFileDelete,
     handleFileNameUpdate,
+    handleFileUpload,
 
     // Utilities
     refetch,

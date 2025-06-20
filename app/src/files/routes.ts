@@ -70,4 +70,41 @@ files.patch('/:userId/files/:fileId', async (c) => {
   }
 });
 
+files.post('/:userId/files', async (c) => {
+  const userId = c.req.param('userId');
+
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return c.json({ error: 'No file provided' }, 400);
+    }
+
+    // 生成唯一的檔案ID
+    const fileId = crypto.randomUUID();
+    const arrayBuffer = await file.arrayBuffer();
+
+    // @ts-ignore
+    const db = c.get('db') as Database;
+    const controller = new FileController(db, c.env.APP_STORAGE);
+
+    const newFile = await controller.createFile(
+      {
+        fileId,
+        userId,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+      },
+      arrayBuffer,
+    );
+
+    return c.json(newFile, 201);
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    return c.json({ error: 'Failed to upload file' }, 500);
+  }
+});
+
 export default files;
