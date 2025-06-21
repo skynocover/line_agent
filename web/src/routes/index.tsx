@@ -1,20 +1,11 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
-import {
-  FileText,
-  CheckSquare,
-  MessageSquare,
-  ExternalLink,
-  ArrowRight,
-  Copy,
-  Check,
-  LogIn,
-  Loader2,
-} from 'lucide-react';
+import { createFileRoute } from '@tanstack/react-router';
+import { MessageSquare, ExternalLink, Copy, Check, LogIn, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/features/auth';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { TodoFeatureCard, FileFeatureCard } from '@/components/feature-cards';
 
 const HomePage = () => {
   const { profile, login, isLoading, error, refreshAuthState } = useAuthStore();
@@ -86,95 +77,8 @@ const HomePage = () => {
 
       {/* Features Section */}
       <div className="grid md:grid-cols-2 gap-6 mb-6">
-        {profile ? (
-          <Link to="/$userId/todo" params={{ userId: profile.userId }} className="no-underline">
-            <Card className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer border-purple-200 hover:border-purple-300">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckSquare className="w-5 h-5 text-purple-600" />
-                    文字 ➡️ 待辦事項
-                  </div>
-                </CardTitle>
-                <CardDescription>只需要傳送文字訊息，AI 就會自動為您建立待辦事項</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">📝 自動解析任務內容</p>
-                  <p className="text-sm text-muted-foreground">⏰ 智能設定提醒時間</p>
-                  <p className="text-sm text-muted-foreground">🔄 即時同步更新</p>
-                </div>
-                <div className="mt-4 flex items-center gap-2 text-sm text-purple-600 font-medium">
-                  <span>點擊進入管理</span>
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ) : (
-          <Card className="hover:shadow-lg transition-shadow border-purple-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckSquare className="w-5 h-5 text-purple-600" />
-                文字 ➡️ 待辦事項
-              </CardTitle>
-              <CardDescription>只需要傳送文字訊息，AI 就會自動為您建立待辦事項</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">📝 自動解析任務內容</p>
-                <p className="text-sm text-muted-foreground">⏰ 智能設定提醒時間</p>
-                <p className="text-sm text-muted-foreground">🔄 即時同步更新</p>
-              </div>
-              <div className="mt-4 text-sm text-muted-foreground">💡 登入後即可使用</div>
-            </CardContent>
-          </Card>
-        )}
-
-        {profile ? (
-          <Link to="/$userId/files" params={{ userId: profile.userId }} className="no-underline">
-            <Card className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer border-amber-200 hover:border-amber-300">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-amber-700" />
-                    檔案 ➡️ 永久備份
-                  </div>
-                </CardTitle>
-                <CardDescription>上傳您的重要檔案，享受安全可靠的雲端儲存服務</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">☁️ 雲端安全儲存</p>
-                  <p className="text-sm text-muted-foreground">🔒 加密保護隱私</p>
-                  <p className="text-sm text-muted-foreground">📱 多裝置同步</p>
-                </div>
-                <div className="mt-4 flex items-center gap-2 text-sm text-amber-700 font-medium">
-                  <span>點擊進入管理</span>
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ) : (
-          <Card className="hover:shadow-lg transition-shadow border-amber-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-amber-700" />
-                檔案 ➡️ 永久備份
-              </CardTitle>
-              <CardDescription>上傳您的重要檔案，享受安全可靠的雲端儲存服務</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">☁️ 雲端安全儲存</p>
-                <p className="text-sm text-muted-foreground">🔒 加密保護隱私</p>
-                <p className="text-sm text-muted-foreground">📱 多裝置同步</p>
-              </div>
-              <div className="mt-4 text-sm text-muted-foreground">💡 登入後即可使用</div>
-            </CardContent>
-          </Card>
-        )}
+        <TodoFeatureCard isAuthenticated={!!profile} userId={profile?.userId} />
+        <FileFeatureCard isAuthenticated={!!profile} userId={profile?.userId} />
       </div>
 
       {/* Login Section for non-authenticated users */}
