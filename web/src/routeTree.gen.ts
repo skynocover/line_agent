@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UserIdTodoRouteImport } from './routes/$userId/todo'
+import { Route as UserIdSettingsRouteImport } from './routes/$userId/settings'
 import { Route as UserIdFilesRouteImport } from './routes/$userId/files'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const UserIdTodoRoute = UserIdTodoRouteImport.update({
   path: '/$userId/todo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UserIdSettingsRoute = UserIdSettingsRouteImport.update({
+  id: '/$userId/settings',
+  path: '/$userId/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UserIdFilesRoute = UserIdFilesRouteImport.update({
   id: '/$userId/files',
   path: '/$userId/files',
@@ -32,30 +38,39 @@ const UserIdFilesRoute = UserIdFilesRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$userId/files': typeof UserIdFilesRoute
+  '/$userId/settings': typeof UserIdSettingsRoute
   '/$userId/todo': typeof UserIdTodoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$userId/files': typeof UserIdFilesRoute
+  '/$userId/settings': typeof UserIdSettingsRoute
   '/$userId/todo': typeof UserIdTodoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$userId/files': typeof UserIdFilesRoute
+  '/$userId/settings': typeof UserIdSettingsRoute
   '/$userId/todo': typeof UserIdTodoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$userId/files' | '/$userId/todo'
+  fullPaths: '/' | '/$userId/files' | '/$userId/settings' | '/$userId/todo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$userId/files' | '/$userId/todo'
-  id: '__root__' | '/' | '/$userId/files' | '/$userId/todo'
+  to: '/' | '/$userId/files' | '/$userId/settings' | '/$userId/todo'
+  id:
+    | '__root__'
+    | '/'
+    | '/$userId/files'
+    | '/$userId/settings'
+    | '/$userId/todo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   UserIdFilesRoute: typeof UserIdFilesRoute
+  UserIdSettingsRoute: typeof UserIdSettingsRoute
   UserIdTodoRoute: typeof UserIdTodoRoute
 }
 
@@ -75,6 +90,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UserIdTodoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$userId/settings': {
+      id: '/$userId/settings'
+      path: '/$userId/settings'
+      fullPath: '/$userId/settings'
+      preLoaderRoute: typeof UserIdSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$userId/files': {
       id: '/$userId/files'
       path: '/$userId/files'
@@ -88,6 +110,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UserIdFilesRoute: UserIdFilesRoute,
+  UserIdSettingsRoute: UserIdSettingsRoute,
   UserIdTodoRoute: UserIdTodoRoute,
 }
 export const routeTree = rootRouteImport

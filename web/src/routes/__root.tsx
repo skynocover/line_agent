@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Menu, Home, FileText, CheckSquare, ChevronRight, LogOut } from 'lucide-react';
+import { Menu, Home, FileText, CheckSquare, ChevronRight, LogOut, Settings } from 'lucide-react';
 import { Toaster } from 'sonner';
 
 import { createRootRoute, Outlet, Link, useSearch, useNavigate } from '@tanstack/react-router';
@@ -64,6 +64,14 @@ const RootComponent = () => {
       color: 'purple',
       requireAuth: true,
     },
+    {
+      to: '/$userId/settings' as const,
+      icon: Settings,
+      label: '設定',
+      description: '管理系統設定',
+      color: 'gray',
+      requireAuth: true,
+    },
   ];
 
   // 渲染導航項目
@@ -74,6 +82,7 @@ const RootComponent = () => {
       green: 'bg-green-100 text-green-600 group-hover:bg-green-200',
       amber: 'bg-amber-100 text-amber-700 group-hover:bg-amber-200',
       purple: 'bg-purple-100 text-purple-600 group-hover:bg-purple-200',
+      gray: 'bg-gray-100 text-gray-600 group-hover:bg-gray-200',
     };
 
     // 如果需要認證但用戶未登入，不顯示該項目
