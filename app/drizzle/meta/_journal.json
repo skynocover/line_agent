@@ -5,57 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1749818373134,
-      "tag": "0000_shallow_white_queen",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1749825842694,
-      "tag": "0001_dizzy_famine",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1749826919536,
-      "tag": "0002_nervous_tenebrous",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1750165027739,
-      "tag": "0003_glamorous_swarm",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1750258204418,
-      "tag": "0004_dapper_mephistopheles",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1750321087682,
-      "tag": "0005_fast_domino",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1750337870881,
-      "tag": "0006_neat_shiver_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1750407335988,
-      "tag": "0007_black_snowbird",
+      "when": 1750511380529,
+      "tag": "0000_mean_leech",
       "breakpoints": true
     }
   ]

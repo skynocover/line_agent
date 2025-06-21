@@ -18,17 +18,35 @@
   "r2_buckets": [
     {
       "binding": "APP_STORAGE",
-		  "bucket_name": "line-bot-backup",
+		  "bucket_name": "line-agent-storage",
     }
   ],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "line-bot-database",
+      "database_name": "line-agent-database",
       "database_id": "n/a",
       "migrations_dir": "./drizzle"
     }
   ],
+  "env":{
+    "production": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "line-agent-database",
+          "database_id": "b4590b7f-ec25-4044-9ff3-140f68e3c720",
+          "migrations_dir": "./drizzle"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "APP_STORAGE",
+          "bucket_name": "line-agent-storage"
+        }
+      ],
+    }
+  }
   // "ai": {
   //   "binding": "AI"
   // },
