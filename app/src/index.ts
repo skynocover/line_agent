@@ -2,11 +2,10 @@ import { Hono } from 'hono';
 import { R2Bucket, D1Database } from '@cloudflare/workers-types';
 import { fileTypeFromBuffer } from 'file-type';
 import { cors } from 'hono/cors';
-import { eq } from 'drizzle-orm';
 
 import { createDb } from '../db';
 import { downloadFile, replyMessage } from '../lib/line';
-import { messages, type Newfile, type NewMessage } from '../db/schema';
+import { type Newfile, type NewMessage } from '../db/schema';
 import type { Database } from '../db';
 import filesRoutes from './files/routes';
 import { FileController } from './files/controller';
@@ -144,52 +143,38 @@ const handleTextMessage = async (
 ) => {
   const { source, message, replyToken } = event;
   const userId = source.userId;
+  console.log('🚀 ~ handleTextMessage ~ userId:', userId);
 
-  // @ts-ignore
-  const db = c.get('db') as Database;
+  // 首先記錄訊息到資料庫
+  const messageData: NewMessage = {
+    messageId: message.id,
+    userId,
+    content: message.text,
+    // eventId 會在創建事件後更新
+  };
 
   try {
-    const result = await db.transaction(async (tx) => {
-      // 1. 創建訊息
-      const messageData: NewMessage = {
-        messageId: message.id,
-        userId,
-        content: message.text,
-      };
+    const savedMessageId = await messageController.createMessage(messageData);
 
-      const savedMessageId = await tx
-        .insert(messages)
-        .values(messageData)
-        .returning({ id: messages.id })
-        .then((result) => result[0].id);
-
-      // 2. 使用 AI 創建事件
-      const { createdEvent, text, error } = await createEventWithAI(message.text, {
-        userId,
-        controller: calendarEventController,
-        apiKey: googleApiKey,
-        messageId: message.id,
-      });
-
-      // 3. 如果有創建事件，更新訊息
-      if (createdEvent) {
-        await tx
-          .update(messages)
-          .set({ eventId: createdEvent.id })
-          .where(eq(messages.id, savedMessageId));
-      }
-
-      return { text, error, createdEvent };
+    // 使用 AI 創建事件
+    const { createdEvent, text, error } = await createEventWithAI(message.text, {
+      userId,
+      controller: calendarEventController,
+      apiKey: googleApiKey,
+      messageId: message.id,
     });
+
+    if (createdEvent) {
+      await messageController.updateMessageEventId(savedMessageId, createdEvent.id);
+    }
 
     return await replyMessage({
       replyToken,
-      message: result.text || result.error || 'Error',
+      message: text || error || 'Error',
       accessToken,
       quoteToken: message.quoteToken,
     });
   } catch (error) {
-    // 事務會自動回滾
     console.error('🚀 ~ handleTextMessage ~ error:', error);
     return await replyMessage({
       replyToken,
