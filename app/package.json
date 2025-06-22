@@ -7,7 +7,7 @@
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "d1:migrations:local": "wrangler d1 migrations apply DB --local",
-    "d1:apply-migrationsY:production": "wrangler d1 migrations apply DB --env production --remote"
+    "d1:apply-migrations:production": "wrangler d1 migrations apply DB --env production --remote"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.19",
