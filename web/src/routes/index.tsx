@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { MessageSquare, ExternalLink, Copy, Check, LogIn, Loader2 } from 'lucide-react';
+import { MessageSquare, ExternalLink, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/features/auth';
@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { TodoFeatureCard, FileFeatureCard } from '@/components/feature-cards';
 
 const HomePage = () => {
-  const { profile, login, isLoading, error, refreshAuthState } = useAuthStore();
+  const { profile } = useAuthStore();
   const lineOaId = import.meta.env.VITE_LINEOA_ID;
   const lineUrl = `https://line.me/R/ti/p/@${lineOaId || '640uxald'}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
@@ -28,33 +28,6 @@ const HomePage = () => {
     }
   };
 
-  const handleLogin = async () => {
-    try {
-      await login();
-      if (profile) {
-        toast.success(`歡迎回來，${profile.displayName}！`);
-      }
-    } catch (error) {
-      console.error('Login failed:', error);
-      // 如果不是重定向錯誤，顯示錯誤提示
-      if (error instanceof Error && error.message !== 'Login redirect required') {
-        toast.error('登入失敗，請稍後再試');
-      }
-    }
-  };
-
-  const handleRefreshAuth = async () => {
-    try {
-      await refreshAuthState();
-      if (profile) {
-        toast.success('認證狀態已更新');
-      }
-    } catch (error) {
-      console.error('Refresh auth failed:', error);
-      toast.error('更新認證狀態失敗');
-    }
-  };
-
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       {/* Hero Section */}
@@ -63,16 +36,6 @@ const HomePage = () => {
           🤖 數位管家
         </h1>
         <p className="text-xl text-muted-foreground mb-6">您的智能生活助手，讓日常管理更簡單！</p>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <p className="text-red-600 text-sm">{error}</p>
-            <Button variant="outline" size="sm" onClick={handleRefreshAuth} className="mt-2">
-              重試
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Features Section */}
@@ -80,41 +43,6 @@ const HomePage = () => {
         <TodoFeatureCard isAuthenticated={!!profile} userId={profile?.userId} />
         <FileFeatureCard isAuthenticated={!!profile} userId={profile?.userId} />
       </div>
-
-      {/* Login Section for non-authenticated users */}
-      {!profile && (
-        <Card className="mb-6 border-green-200 bg-gradient-to-r from-green-50 to-green-100">
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2 text-green-700">
-              <LogIn className="w-6 h-6" />
-              立即登入開始使用
-            </CardTitle>
-            <CardDescription className="text-green-600">
-              登入後即可享受完整的數位管家服務，包括待辦事項管理和檔案儲存
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button
-              size="lg"
-              onClick={handleLogin}
-              disabled={isLoading}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  登入中...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5 mr-2" />
-                  使用Line登入
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
       {/* LINE Friend Section */}
       <Card className="mb-8">

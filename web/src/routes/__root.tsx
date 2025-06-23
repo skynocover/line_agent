@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Menu, Home, FileText, CheckSquare, ChevronRight, LogOut, Settings } from 'lucide-react';
+import {
+  Menu,
+  Home,
+  FileText,
+  CheckSquare,
+  ChevronRight,
+  LogOut,
+  LogIn,
+  Settings,
+} from 'lucide-react';
 import { Toaster } from 'sonner';
 
 import { createRootRoute, Outlet, Link, useSearch, useNavigate } from '@tanstack/react-router';
@@ -158,27 +167,57 @@ const RootComponent = () => {
           </nav>
 
           {/* User Profile */}
-          {isAuthenticated && profile && (
-            <div className="ml-auto flex items-center gap-4">
-              <div className="hidden md:flex flex-col items-end">
-                <span className="text-sm font-medium">{profile.displayName}</span>
-                <span className="text-xs text-muted-foreground">ID: {profile.userId}</span>
+          <div className="ml-auto flex items-center gap-4 mr-4">
+            {isAuthenticated && profile ? (
+              <>
+                <div className="hidden md:flex flex-col items-end">
+                  <span className="text-sm font-medium">{profile.displayName}</span>
+                  <span className="text-xs text-muted-foreground">ID: {profile.userId}</span>
+                </div>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile.pictureUrl} alt={profile.displayName} />
+                  <AvatarFallback>{profile.displayName?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  title="Logout"
+                  disabled={isLoading}
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await useAuthStore.getState().login();
+                    } catch (error) {
+                      console.error('Login failed:', error);
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 animate-spin border-2 border-white border-t-transparent rounded-full" />
+                      登入中...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="h-4 w-4 mr-2" />
+                      LINE 登入
+                    </>
+                  )}
+                </Button>
               </div>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={profile.pictureUrl} alt={profile.displayName} />
-                <AvatarFallback>{profile.displayName?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                title="Logout"
-                disabled={isLoading}
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </header>
 
