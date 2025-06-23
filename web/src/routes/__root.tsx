@@ -236,7 +236,7 @@ const RootComponent = () => {
         </CalendarProvider>
       </main>
 
-      <TanStackRouterDevtools />
+      {import.meta.env.DEV && <TanStackRouterDevtools />}
     </div>
   );
 };
