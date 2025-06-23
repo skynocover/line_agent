@@ -227,7 +227,13 @@ export function EventDialog({ event, isOpen, onClose, onSave, onDelete }: EventD
           <div className="flex items-center gap-4">
             <div className="flex-1 *:not-first:mt-1.5">
               <Label htmlFor="title">Title</Label>
-              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                autoFocus={false}
+                tabIndex={-1}
+              />
             </div>
             <div className="flex items-center gap-2 pt-6">
               <Checkbox
