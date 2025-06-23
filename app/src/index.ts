@@ -168,6 +168,8 @@ const handleTextMessage = async (
       await messageController.updateMessageEventId(savedMessageId, createdEvent.id);
     }
 
+    console.log(`text: ${text}, error: ${error}`);
+
     return await replyMessage({
       replyToken,
       message: text || error || 'Error',

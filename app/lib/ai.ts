@@ -176,6 +176,50 @@ export async function createEventWithAI(
           }
         }
       }
+    } else {
+      // 沒有 tool call 時，直接創建事件
+      // 使用用戶訊息作為標題，時間為現在到往後一小時
+      const now = new Date();
+      const endTime = new Date(now.getTime() + 60 * 60 * 1000); // 往後一小時
+
+      const eventData: NewCalendarEvent = {
+        title: userMessage,
+        description: undefined,
+        start: now,
+        end: endTime,
+        allDay: false,
+        color: undefined,
+        label: undefined,
+        userId,
+        completed: false,
+        messageId,
+      };
+
+      try {
+        createdEvent = await controller.createEvent(eventData);
+
+        resultText = `成功建立待辦事項
+標題: ${eventData.title}
+開始時間: ${eventData.start.toLocaleString('zh-TW', {
+          timeZone: timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+結束時間: ${eventData.end.toLocaleString('zh-TW', {
+          timeZone: timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`;
+      } catch (error) {
+        console.error('直接創建活動失敗:', error);
+        resultText = `建立待辦事項失敗: ${error instanceof Error ? error.message : '未知錯誤'}`;
+      }
     }
 
     return {
