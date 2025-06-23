@@ -26,6 +26,7 @@ interface AuthState {
   // Auth methods
   checkAuth: () => Promise<boolean>;
   checkAuthWithoutLogin: () => Promise<void>;
+  autoLoginInLineApp: () => Promise<void>;
   login: () => Promise<void>;
   logout: () => Promise<void>;
 
@@ -203,6 +204,34 @@ export const useAuthStore = create<AuthState>()(
 
       refreshAuthState: async () => {
         await get().checkAuthWithoutLogin();
+      },
+
+      autoLoginInLineApp: async () => {
+        // 只在 LINE 內建瀏覽器中執行自動登入
+        if (!isInLineApp()) {
+          return;
+        }
+
+        const currentState = get();
+
+        // 如果已經有有效的認證資訊，不需要重複登入
+        if (currentState.isAuthenticated && currentState.profile && currentState.accessToken) {
+          return;
+        }
+
+        // 先嘗試無需登入的狀態檢查
+        await get().checkAuthWithoutLogin();
+
+        // 檢查完後如果仍未認證，則執行自動登入
+        const updatedState = get();
+        if (!updatedState.isAuthenticated) {
+          try {
+            await get().login();
+          } catch (error) {
+            console.warn('Auto login in LINE app failed:', error);
+            // 自動登入失敗不視為錯誤，用戶可以手動登入
+          }
+        }
       },
     }),
     {

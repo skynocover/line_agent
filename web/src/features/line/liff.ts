@@ -45,7 +45,19 @@ const initLiff = async (): Promise<void> => {
 
 // 檢查是否在 LINE 環境中
 const isInLineApp = () => {
-  return typeof window !== 'undefined' && liff.isInClient();
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  // 如果 LIFF 已經初始化，使用官方 API
+  if (isLiffInitialized) {
+    return liff.isInClient();
+  }
+
+  // 如果 LIFF 未初始化，透過 User Agent 檢測
+  // LINE 內建瀏覽器的 User Agent 通常包含 "Line" 字串
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  return userAgent.includes('line');
 };
 
 // 處理登入

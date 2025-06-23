@@ -19,9 +19,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { CalendarProvider } from '@/components/event-calendar/calendar-provider';
+import { isInLineApp } from '@/features/line/liff';
 
 const RootComponent = () => {
-  const { profile, isAuthenticated, isLoading, logout, refreshAuthState } = useAuthStore();
+  const { profile, isAuthenticated, isLoading, logout, refreshAuthState, autoLoginInLineApp } =
+    useAuthStore();
 
   const search = useSearch({ from: '__root__' }) as { to?: string };
   const navigate = useNavigate();
@@ -37,8 +39,15 @@ const RootComponent = () => {
 
   // 在應用程式載入時檢查認證狀態
   useEffect(() => {
-    refreshAuthState();
-  }, [refreshAuthState]);
+    // 根據是否在 LINE 內決定認證策略
+    if (isInLineApp()) {
+      // 在 LINE 內建瀏覽器中，執行自動登入
+      autoLoginInLineApp();
+    } else {
+      // 在外部瀏覽器中，僅刷新認證狀態，不自動登入
+      refreshAuthState();
+    }
+  }, [refreshAuthState, autoLoginInLineApp]);
 
   // 處理登出
   const handleLogout = async () => {
