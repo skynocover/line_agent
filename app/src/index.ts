@@ -14,6 +14,7 @@ import { CalendarEventController } from './calendar-events/controller';
 import { MessageController } from './messages/controller';
 import { createEventWithAI } from '../lib/ai';
 import { verifyLiffAccessToken, verifyUserIdMatch } from './middlewares/verify';
+import { handleError, shouldIgnoreError, formatUserErrorMessage } from '../lib/error-handler';
 
 export type Bindings = {
   APP_STORAGE: R2Bucket;
@@ -126,8 +127,11 @@ app.post('/webhook', async (c) => {
 
     // 等待所有處理完成
     await Promise.all(promises);
-  } catch (error) {
-    console.error('🚀 ~ handleGeneralFile ~ error:', error);
+  } catch (error: any) {
+    console.error('🚀 ~ handleWebhook ~ error:', error);
+    if (error?.response?.data?.message?.includes('Invalid reply token')) {
+      return c.text('success');
+    }
     return c.text('Error' + error, 500);
   }
 
@@ -157,33 +161,48 @@ const handleTextMessage = async (
     const savedMessageId = await messageController.createMessage(messageData);
 
     // 使用 AI 創建事件
-    const { createdEvent, text, error } = await createEventWithAI(message.text, {
+    const aiResult = await createEventWithAI(message.text, {
       userId,
       controller: calendarEventController,
       apiKey: googleApiKey,
       messageId: message.id,
     });
 
-    if (createdEvent) {
-      await messageController.updateMessageEventId(savedMessageId, createdEvent.id);
+    // 處理 AI 結果
+    if (aiResult.success) {
+      // 更新訊息關聯的事件ID
+      if (aiResult.createdEvent) {
+        await messageController.updateMessageEventId(savedMessageId, aiResult.createdEvent.id);
+      }
+
+      // 回覆成功訊息
+      return await replyMessage({
+        replyToken,
+        message: aiResult.text || '操作完成',
+        accessToken,
+        quoteToken: message.quoteToken,
+      });
+    } else {
+      // AI 處理失敗，回覆錯誤訊息（錯誤已在 AI 層級記錄）
+      return await replyMessage({
+        replyToken,
+        message: aiResult.error || '處理失敗',
+        accessToken,
+        quoteToken: message.quoteToken,
+      });
     }
-
-    console.log(`text: ${text}, error: ${error}`);
-
-    return await replyMessage({
-      replyToken,
-      message: text || error || 'Error',
-      accessToken,
-      quoteToken: message.quoteToken,
-    });
   } catch (error) {
-    console.error('🚀 ~ handleTextMessage ~ error:', error);
-    return await replyMessage({
-      replyToken,
-      message: `處理訊息時發生錯誤: ${error}`,
-      accessToken,
-      quoteToken: message.quoteToken,
-    });
+    // 使用統一錯誤處理
+    const errorInfo = handleError(error, 'handleTextMessage');
+
+    if (errorInfo.shouldReply) {
+      return await replyMessage({
+        replyToken,
+        message: errorInfo.userMessage,
+        accessToken,
+        quoteToken: message.quoteToken,
+      });
+    }
   }
 };
 
@@ -195,6 +214,7 @@ const handleGeneralFile = async (event: any, accessToken: string, controller: Fi
   try {
     const fileBuffer = await downloadFile({ messageId: message.id, accessToken });
     const fileType = await fileTypeFromBuffer(fileBuffer);
+
     // 檔案基本資訊
     const fileInfo: Newfile = {
       fileId: `${message.id}.${fileType?.ext || 'bin'}`,
@@ -213,12 +233,16 @@ const handleGeneralFile = async (event: any, accessToken: string, controller: Fi
       quoteToken: message.quoteToken,
     });
   } catch (error) {
-    console.error('🚀 ~ handleGeneralFile ~ error:', error);
-    await replyMessage({
-      replyToken,
-      message: `備份失敗, 錯誤: ${error}`,
-      accessToken,
-    });
+    // 使用統一錯誤處理
+    const errorInfo = handleError(error, 'handleGeneralFile');
+
+    if (errorInfo.shouldReply) {
+      await replyMessage({
+        replyToken,
+        message: errorInfo.userMessage,
+        accessToken,
+      });
+    }
   }
 };
 

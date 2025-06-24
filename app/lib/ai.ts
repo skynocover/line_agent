@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { CalendarEventController } from '../src/calendar-events/controller';
 import type { calendarEvents, NewCalendarEvent } from '../db/schema';
 import { createEventPrompt } from './prompts';
+import { handleError } from './error-handler';
 
 export const createGoogleAI = ({ apiKey }: { apiKey: string }) => {
   return createGoogleGenerativeAI({
@@ -26,6 +27,19 @@ export const createEventSchema = z.object({
   label: z.string().optional().describe('活動標籤'),
 });
 
+// 錯誤結果類型
+interface ErrorResult {
+  success: false;
+  error: string;
+}
+
+// 成功結果類型
+interface SuccessResult {
+  success: true;
+  message: string;
+  createdEvent: typeof calendarEvents.$inferSelect;
+}
+
 // AI 工具工廠函數：創建 calendar event tool
 export const createEventToolFactory = (
   controller: CalendarEventController,
@@ -37,23 +51,23 @@ export const createEventToolFactory = (
     description: '創建一個新的行事曆活動',
     parameters: createEventSchema,
     execute: async ({ title, description, start, end, allDay, color, label }) => {
+      // 構建 NewCalendarEvent 物件
+      const eventData: NewCalendarEvent = {
+        title,
+        description,
+        start: new Date(start),
+        end: new Date(end),
+        allDay: allDay || false,
+        color,
+        label,
+        userId,
+        completed: false,
+        messageId,
+      };
+
+      console.log('🚀 ~ createEventTool ~ eventData:', eventData);
+
       try {
-        // 構建 NewCalendarEvent 物件
-        const eventData: NewCalendarEvent = {
-          title,
-          description,
-          start: new Date(start),
-          end: new Date(end),
-          allDay: allDay || false,
-          color,
-          label,
-          userId,
-          completed: false,
-          messageId,
-        };
-
-        console.log('🚀 ~ createEventTool ~ eventData:', eventData);
-
         // 使用 controller 創建活動
         const createdEvent = await controller.createEvent(eventData);
 
@@ -80,16 +94,78 @@ export const createEventToolFactory = (
           success: true,
           message: resultMessage,
           createdEvent,
-        };
+        } as SuccessResult;
       } catch (error) {
-        console.error('創建活動失敗:', error);
+        // 使用統一錯誤處理來解析詳細的 D1 錯誤信息
+        const errorInfo = handleError(error, 'createEventTool');
+
         return {
           success: false,
-          error: error instanceof Error ? error.message : '未知錯誤',
-        };
+          error: errorInfo.userMessage,
+        } as ErrorResult;
       }
     },
   });
+
+// 創建事件的通用邏輯
+async function createDirectEvent(
+  controller: CalendarEventController,
+  userMessage: string,
+  userId: string,
+  messageId: string,
+  timezone: string,
+): Promise<SuccessResult | ErrorResult> {
+  const now = new Date();
+  const endTime = new Date(now.getTime() + 60 * 60 * 1000); // 往後一小時
+
+  const eventData: NewCalendarEvent = {
+    title: userMessage,
+    description: undefined,
+    start: now,
+    end: endTime,
+    allDay: false,
+    color: undefined,
+    label: undefined,
+    userId,
+    completed: false,
+    messageId,
+  };
+
+  try {
+    const createdEvent = await controller.createEvent(eventData);
+
+    const resultMessage = `成功建立待辦事項
+標題: ${eventData.title}
+開始時間: ${eventData.start.toLocaleString('zh-TW', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })}
+結束時間: ${eventData.end.toLocaleString('zh-TW', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+
+    return {
+      success: true,
+      message: resultMessage,
+      createdEvent,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+    return {
+      success: false,
+      error: `建立待辦事項失敗: ${errorMessage}`,
+    };
+  }
+}
 
 // AI 助手函數，使用工具創建活動
 export async function createEventWithAI(
@@ -144,81 +220,32 @@ export async function createEventWithAI(
           const toolResult = result.toolResults.find((tr) => tr.toolCallId === toolCall.toolCallId);
 
           if (toolResult && toolResult.result) {
-            const toolResultData = toolResult.result as any;
+            const toolResultData = toolResult.result as SuccessResult | ErrorResult;
 
-            if (toolResultData.success && toolResultData.createdEvent) {
+            if (toolResultData.success) {
               createdEvent = toolResultData.createdEvent;
-              const { title, start, end } = toolCall.args as CreateEventParams;
-
-              console.log('🚀 ~ createEventWithAI ~ createdEvent:', createdEvent);
-
-              resultText = `成功建立待辦事項
-標題: ${title}
-開始時間: ${new Date(start).toLocaleString('zh-TW', {
-                timeZone: timezone,
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-結束時間: ${new Date(end).toLocaleString('zh-TW', {
-                timeZone: timezone,
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}`;
-            } else if (toolResultData.success === false) {
-              resultText = `建立待辦事項失敗: ${toolResultData.error || '未知錯誤'}`;
+              resultText = toolResultData.message;
+            } else {
+              resultText = toolResultData.error;
             }
           }
         }
       }
     } else {
       // 沒有 tool call 時，直接創建事件
-      // 使用用戶訊息作為標題，時間為現在到往後一小時
-      const now = new Date();
-      const endTime = new Date(now.getTime() + 60 * 60 * 1000); // 往後一小時
-
-      const eventData: NewCalendarEvent = {
-        title: userMessage,
-        description: undefined,
-        start: now,
-        end: endTime,
-        allDay: false,
-        color: undefined,
-        label: undefined,
+      const directResult = await createDirectEvent(
+        controller,
+        userMessage,
         userId,
-        completed: false,
         messageId,
-      };
+        timezone,
+      );
 
-      try {
-        createdEvent = await controller.createEvent(eventData);
-
-        resultText = `成功建立待辦事項
-標題: ${eventData.title}
-開始時間: ${eventData.start.toLocaleString('zh-TW', {
-          timeZone: timezone,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-結束時間: ${eventData.end.toLocaleString('zh-TW', {
-          timeZone: timezone,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}`;
-      } catch (error) {
-        console.error('直接創建活動失敗:', error);
-        resultText = `建立待辦事項失敗: ${error instanceof Error ? error.message : '未知錯誤'}`;
+      if (directResult.success) {
+        createdEvent = directResult.createdEvent;
+        resultText = directResult.message;
+      } else {
+        resultText = directResult.error;
       }
     }
 
@@ -230,10 +257,12 @@ export async function createEventWithAI(
       createdEvent, // 返回創建的活動
     };
   } catch (error) {
-    console.log('🚀 ~ createEventWithAI ~ error:', error);
+    // 頂層錯誤處理 - 只在這裡記錄錯誤
+    console.error('🚀 ~ createEventWithAI ~ error:', error);
+    const errorMessage = error instanceof Error ? error.message : '未知錯誤';
     return {
       success: false,
-      error: error instanceof Error ? error.message : '未知錯誤',
+      error: `AI 處理失敗: ${errorMessage}`,
     };
   }
 }
