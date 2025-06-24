@@ -41,7 +41,7 @@ interface SuccessResult {
 }
 
 // AI 工具工廠函數：創建 calendar event tool
-export const createEventToolFactory = (
+const createEventToolFactory = (
   controller: CalendarEventController,
   userId: string,
   timezone: string = 'Asia/Taipei',
@@ -108,13 +108,13 @@ export const createEventToolFactory = (
   });
 
 // 創建事件的通用邏輯
-async function createDirectEvent(
+const createDirectEvent = async (
   controller: CalendarEventController,
   userMessage: string,
   userId: string,
   messageId: string,
   timezone: string,
-): Promise<SuccessResult | ErrorResult> {
+): Promise<SuccessResult | ErrorResult> => {
   const now = new Date();
   const endTime = new Date(now.getTime() + 60 * 60 * 1000); // 往後一小時
 
@@ -165,10 +165,10 @@ async function createDirectEvent(
       error: `建立待辦事項失敗: ${errorMessage}`,
     };
   }
-}
+};
 
 // AI 助手函數，使用工具創建活動
-export async function createEventWithAI(
+export const createEventWithAI = async (
   userMessage: string,
   context: {
     userId: string;
@@ -177,7 +177,7 @@ export async function createEventWithAI(
     apiKey: string;
     timezone?: string; // 新增時區參數
   },
-) {
+) => {
   const { userId, controller, apiKey, timezone = 'Asia/Taipei', messageId } = context;
 
   try {
@@ -265,6 +265,6 @@ export async function createEventWithAI(
       error: `AI 處理失敗: ${errorMessage}`,
     };
   }
-}
+};
 
 export type CreateEventParams = z.infer<typeof createEventSchema>;
