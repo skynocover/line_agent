@@ -8,6 +8,7 @@ import {
   LogOut,
   LogIn,
   Settings,
+  MessageSquareMore,
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
@@ -28,6 +29,15 @@ const RootComponent = () => {
   const search = useSearch({ from: '__root__' }) as { to?: string };
   const navigate = useNavigate();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  // 回報表單網址
+  const reportFormUrl = import.meta.env.VITE_REPORT_FORM;
+
+  const handleReportClick = () => {
+    if (reportFormUrl) {
+      window.open(reportFormUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   // 處理帶有 'to' 參數的 URL 重定向
   useEffect(() => {
@@ -166,6 +176,26 @@ const RootComponent = () => {
             <SheetContent side="left" className="w-[300px] sm:w-[400px]">
               <nav className="flex flex-col gap-2 mt-4">
                 {navigationItems.map((item) => renderNavItem(item, true))}
+
+                {/* 回報表單選項 */}
+                {reportFormUrl && (
+                  <button
+                    onClick={() => {
+                      handleReportClick();
+                      setIsSheetOpen(false);
+                    }}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors group text-left"
+                  >
+                    <div className="p-2 rounded-md bg-orange-100 text-orange-600 group-hover:bg-orange-200">
+                      <MessageSquareMore className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium">問題回報</div>
+                      <div className="text-sm text-muted-foreground">回報問題或提供建議</div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
               </nav>
             </SheetContent>
           </Sheet>
@@ -177,6 +207,20 @@ const RootComponent = () => {
 
           {/* User Profile */}
           <div className="ml-auto flex items-center gap-4 mr-4">
+            {/* 回報表單按鈕 */}
+            {reportFormUrl && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReportClick}
+                title="問題回報與建議"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <MessageSquareMore className="h-4 w-4 mr-1" />
+                回報
+              </Button>
+            )}
+
             {isAuthenticated && profile ? (
               <>
                 <div className="hidden md:flex flex-col items-end">
