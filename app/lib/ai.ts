@@ -149,7 +149,11 @@ const createDirectEvent = async (
     messageId,
   };
 
-  return await executeCreateEvent(controller, eventData, timezone);
+  console.log('🚀 ~ createDirectEvent ~ eventData:', JSON.stringify(eventData));
+  const result = await executeCreateEvent(controller, eventData, timezone);
+  console.log('🚀 ~ createDirectEvent ~ result:', JSON.stringify(result));
+
+  return result;
 };
 
 // ============================================================================
@@ -182,8 +186,9 @@ const createEventTool = (
         messageId,
       };
 
-      console.log('🚀 ~ createEventTool ~ eventData:', JSON.stringify(eventData));
-      return await executeCreateEvent(controller, eventData, timezone);
+      const result = await executeCreateEvent(controller, eventData, timezone);
+      console.log('🚀 ~ createEventTool ~ result:', JSON.stringify(result));
+      return result;
     },
   });
 
@@ -275,6 +280,17 @@ export const createEventWithAI = async (
       createdEvent,
       success: toolSuccess,
     } = processToolResults(result.toolCalls || [], result.toolResults);
+
+    console.log(
+      '🚀 ~ createEventWithAI ~ processToolResults 結果:',
+      JSON.stringify({
+        toolResultText,
+        createdEvent: createdEvent?.id,
+        toolSuccess,
+        toolCallsLength: result.toolCalls?.length || 0,
+        toolResultsLength: result.toolResults?.length || 0,
+      }),
+    );
 
     // 如果有工具結果，使用工具結果
     if (toolResultText) {
