@@ -296,19 +296,3 @@ const parseAxiosError = (error: any): ErrorInfo => {
     shouldReply: true,
   };
 };
-
-/**
- * 統一的錯誤處理函數
- */
-export const handleError = (error: unknown, context?: string): ErrorInfo => {
-  const errorInfo = parseError(error, context);
-
-  // 錯誤發生當下就直接印出
-  const logMessage = context
-    ? `🚀 ~ ${context} ~ error: ${errorInfo.message}`
-    : `🚀 ~ error: ${errorInfo.message}`;
-
-  console.error(logMessage, error);
-
-  return errorInfo;
-};

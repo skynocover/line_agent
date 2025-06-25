@@ -14,7 +14,7 @@ import { CalendarEventController } from './calendar-events/controller';
 import { MessageController } from './messages/controller';
 import { createEventWithAI } from '../lib/ai';
 import { verifyLiffAccessToken, verifyUserIdMatch } from './middlewares/verify';
-import { handleError } from '../lib/error-handler';
+import { parseError } from '../lib/error-handler';
 
 export type Bindings = {
   APP_STORAGE: R2Bucket;
@@ -195,8 +195,8 @@ const handleTextMessage = async (
       });
     }
   } catch (error) {
-    // 使用統一錯誤處理
-    const errorInfo = handleError(error, 'handleTextMessage');
+    const errorInfo = parseError(error, 'handleTextMessage');
+    console.error('🚀 ~ error:', errorInfo.message);
 
     if (errorInfo.shouldReply) {
       return await replyMessage({
@@ -236,8 +236,8 @@ const handleGeneralFile = async (event: any, accessToken: string, controller: Fi
       quoteToken: message.quoteToken,
     });
   } catch (error) {
-    // 使用統一錯誤處理
-    const errorInfo = handleError(error, 'handleGeneralFile');
+    const errorInfo = parseError(error, 'handleGeneralFile');
+    console.error('🚀 ~ error:', errorInfo.message);
 
     if (errorInfo.shouldReply) {
       await replyMessage({

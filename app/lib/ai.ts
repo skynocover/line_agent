@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { CalendarEventController } from '../src/calendar-events/controller';
 import type { calendarEvents, NewCalendarEvent } from '../db/schema';
 import { createEventPrompt } from './prompts';
-import { handleError } from './error-handler';
+import { parseError } from './error-handler';
 
 const DEFAULT_TIMEZONE = 'Asia/Taipei';
 const DEFAULT_EVENT_DURATION_HOURS = 1;
@@ -114,7 +114,8 @@ const executeCreateEvent = async (
       createdEvent,
     };
   } catch (error) {
-    const errorInfo = handleError(error, 'executeCreateEvent');
+    const errorInfo = parseError(error, 'executeCreateEvent');
+    console.error('🚀 ~ error:', errorInfo.message);
     return {
       success: false,
       error: errorInfo.userMessage,
@@ -316,7 +317,8 @@ export const createEventWithAI = async (
       };
     }
   } catch (error) {
-    const errorInfo = handleError(error, 'createEventWithAI');
+    const errorInfo = parseError(error, 'createEventWithAI');
+    console.error('🚀 ~ error:', errorInfo.message);
     return {
       success: false,
       text: '',
