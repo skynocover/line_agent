@@ -6,11 +6,13 @@ import type { calendarEvents, NewCalendarEvent } from '../db/schema';
 import { createEventPrompt } from './prompts';
 import { handleError } from './error-handler';
 
-export const createGoogleAI = ({ apiKey }: { apiKey: string }) => {
-  return createGoogleGenerativeAI({
-    apiKey,
-  });
-};
+const DEFAULT_TIMEZONE = 'Asia/Taipei';
+const DEFAULT_EVENT_DURATION_HOURS = 1;
+const AI_MODEL = 'gemini-2.0-flash-exp';
+
+// ============================================================================
+// TYPES & SCHEMAS
+// ============================================================================
 
 // Calendar Event 工具的參數 schema
 export const createEventSchema = z.object({
@@ -27,96 +29,111 @@ export const createEventSchema = z.object({
   label: z.string().optional().describe('活動標籤'),
 });
 
-// 錯誤結果類型
+export type CreateEventParams = z.infer<typeof createEventSchema>;
+
+// 結果類型定義
 interface ErrorResult {
   success: false;
   error: string;
 }
 
-// 成功結果類型
 interface SuccessResult {
   success: true;
   message: string;
   createdEvent: typeof calendarEvents.$inferSelect;
 }
 
-// AI 工具工廠函數：創建 calendar event tool
-const createEventToolFactory = (
-  controller: CalendarEventController,
-  userId: string,
-  timezone: string = 'Asia/Taipei',
-  messageId: string,
-) =>
-  tool({
-    description: '創建一個新的行事曆活動',
-    parameters: createEventSchema,
-    execute: async ({ title, description, start, end, allDay, color, label }) => {
-      // 構建 NewCalendarEvent 物件
-      const eventData: NewCalendarEvent = {
-        title,
-        description,
-        start: new Date(start),
-        end: new Date(end),
-        allDay: allDay || false,
-        color,
-        label,
-        userId,
-        completed: false,
-        messageId,
-      };
+type EventResult = SuccessResult | ErrorResult;
 
-      console.log('🚀 ~ createEventTool ~ eventData:', eventData);
+// AI 處理上下文
+interface AIContext {
+  userId: string;
+  messageId: string;
+  controller: CalendarEventController;
+  apiKey: string;
+  timezone?: string;
+}
 
-      try {
-        // 使用 controller 創建活動
-        const createdEvent = await controller.createEvent(eventData);
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
 
-        const resultMessage = `成功建立待辦事項
+/**
+ * 格式化成功訊息
+ */
+const formatSuccessMessage = (eventData: NewCalendarEvent, timezone: string): string => {
+  const formatOptions: Intl.DateTimeFormatOptions = {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  };
+
+  return `成功建立待辦事項
 標題: ${eventData.title}
-開始時間: ${eventData.start.toLocaleString('zh-TW', {
-          timeZone: timezone,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-結束時間: ${eventData.end.toLocaleString('zh-TW', {
-          timeZone: timezone,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}`;
+開始時間: ${eventData.start.toLocaleString('zh-TW', formatOptions)}
+結束時間: ${eventData.end.toLocaleString('zh-TW', formatOptions)}`;
+};
 
-        return {
-          success: true,
-          message: resultMessage,
-          createdEvent,
-        } as SuccessResult;
-      } catch (error) {
-        // 使用統一錯誤處理來解析詳細的 D1 錯誤信息
-        const errorInfo = handleError(error, 'createEventTool');
+/**
+ * 獲取用戶本地時間字串
+ */
+const getUserLocalDateString = (timezone: string): string => {
+  const now = new Date();
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(now);
+};
 
-        return {
-          success: false,
-          error: errorInfo.userMessage,
-        } as ErrorResult;
-      }
-    },
-  });
+// ============================================================================
+// EVENT CREATION LOGIC
+// ============================================================================
 
-// 創建事件的通用邏輯
+/**
+ * 執行事件創建的核心邏輯
+ */
+const executeCreateEvent = async (
+  controller: CalendarEventController,
+  eventData: NewCalendarEvent,
+  timezone: string,
+): Promise<EventResult> => {
+  try {
+    const createdEvent = await controller.createEvent(eventData);
+    const resultMessage = formatSuccessMessage(eventData, timezone);
+
+    return {
+      success: true,
+      message: resultMessage,
+      createdEvent,
+    };
+  } catch (error) {
+    const errorInfo = handleError(error, 'executeCreateEvent');
+    return {
+      success: false,
+      error: errorInfo.userMessage,
+    };
+  }
+};
+
+/**
+ * 創建直接事件（不使用AI工具時的默認行為）
+ */
 const createDirectEvent = async (
   controller: CalendarEventController,
   userMessage: string,
   userId: string,
   messageId: string,
   timezone: string,
-): Promise<SuccessResult | ErrorResult> => {
+): Promise<EventResult> => {
   const now = new Date();
-  const endTime = new Date(now.getTime() + 60 * 60 * 1000); // 往後一小時
+  const endTime = new Date(now.getTime() + DEFAULT_EVENT_DURATION_HOURS * 60 * 60 * 1000);
 
   const eventData: NewCalendarEvent = {
     title: userMessage,
@@ -131,74 +148,99 @@ const createDirectEvent = async (
     messageId,
   };
 
-  try {
-    const createdEvent = await controller.createEvent(eventData);
-
-    const resultMessage = `成功建立待辦事項
-標題: ${eventData.title}
-開始時間: ${eventData.start.toLocaleString('zh-TW', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })}
-結束時間: ${eventData.end.toLocaleString('zh-TW', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`;
-
-    return {
-      success: true,
-      message: resultMessage,
-      createdEvent,
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '未知錯誤';
-    return {
-      success: false,
-      error: `建立待辦事項失敗: ${errorMessage}`,
-    };
-  }
+  return await executeCreateEvent(controller, eventData, timezone);
 };
 
-// AI 助手函數，使用工具創建活動
-export const createEventWithAI = async (
-  userMessage: string,
-  context: {
-    userId: string;
-    messageId: string;
-    controller: CalendarEventController;
-    apiKey: string;
-    timezone?: string; // 新增時區參數
-  },
-) => {
-  const { userId, controller, apiKey, timezone = 'Asia/Taipei', messageId } = context;
+// ============================================================================
+// AI TOOLS
+// ============================================================================
+
+/**
+ * 創建 AI 事件工具
+ */
+const createEventTool = (
+  controller: CalendarEventController,
+  userId: string,
+  messageId: string,
+  timezone: string,
+) =>
+  tool({
+    description: '創建一個新的行事曆活動',
+    parameters: createEventSchema,
+    execute: async ({ title, description, start, end, allDay, color, label }) => {
+      const eventData: NewCalendarEvent = {
+        title,
+        description,
+        start: new Date(start),
+        end: new Date(end),
+        allDay: allDay || false,
+        color,
+        label,
+        userId,
+        completed: false,
+        messageId,
+      };
+
+      console.log('🚀 ~ createEventTool ~ eventData:', eventData);
+      return await executeCreateEvent(controller, eventData, timezone);
+    },
+  });
+
+// ============================================================================
+// RESULT PROCESSING
+// ============================================================================
+
+/**
+ * 處理工具調用結果
+ */
+const processToolResults = (
+  toolCalls: any[],
+  toolResults: any[] | undefined,
+): { text: string; createdEvent: typeof calendarEvents.$inferSelect | null } => {
+  let resultText = '';
+  let createdEvent: typeof calendarEvents.$inferSelect | null = null;
+
+  if (toolCalls.length > 0 && toolResults) {
+    for (const toolCall of toolCalls) {
+      if (toolCall.toolName === 'createEvent') {
+        const toolResult = toolResults.find((tr) => tr.toolCallId === toolCall.toolCallId);
+
+        if (toolResult?.result) {
+          const toolResultData = toolResult.result as EventResult;
+
+          if (toolResultData.success) {
+            createdEvent = toolResultData.createdEvent;
+            resultText = toolResultData.message;
+          } else {
+            resultText = toolResultData.error;
+          }
+        }
+        break; // 只處理第一個創建事件的工具調用
+      }
+    }
+  }
+
+  return { text: resultText, createdEvent };
+};
+
+// ============================================================================
+// MAIN AI FUNCTION
+// ============================================================================
+
+/**
+ * 使用 AI 創建事件的主要函數
+ */
+export const createEventWithAI = async (userMessage: string, context: AIContext) => {
+  const { userId, controller, apiKey, messageId } = context;
+  const timezone = context.timezone || DEFAULT_TIMEZONE;
 
   try {
-    const ai = createGoogleAI({ apiKey });
-
-    // 獲取用戶時區的當前時間
-    const now = new Date();
-    const userLocalDate = new Intl.DateTimeFormat('zh-TW', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(now);
-
-    // 創建 tool 實例
-    const createEventTool = createEventToolFactory(controller, userId, timezone, messageId);
+    const ai = createGoogleGenerativeAI({ apiKey });
+    const userLocalDate = getUserLocalDateString(timezone);
+    const eventTool = createEventTool(controller, userId, messageId, timezone);
 
     const result = await generateText({
-      model: ai('gemini-2.0-flash-exp'),
+      model: ai(AI_MODEL),
       messages: [
         {
           role: 'system',
@@ -206,58 +248,51 @@ export const createEventWithAI = async (
         },
         { role: 'user', content: userMessage },
       ],
-      tools: { createEvent: createEventTool },
+      tools: { createEvent: eventTool },
       toolChoice: 'auto',
     });
 
-    let resultText = '';
-    let createdEvent: typeof calendarEvents.$inferSelect | null = null;
+    // 處理工具調用結果
+    const { text: toolResultText, createdEvent } = processToolResults(
+      result.toolCalls || [],
+      result.toolResults,
+    );
 
-    if (result.toolCalls && result.toolCalls.length > 0) {
-      for (const toolCall of result.toolCalls) {
-        if (toolCall.toolName === 'createEvent' && result.toolResults) {
-          // 找到對應的 tool result
-          const toolResult = result.toolResults.find((tr) => tr.toolCallId === toolCall.toolCallId);
-
-          if (toolResult && toolResult.result) {
-            const toolResultData = toolResult.result as SuccessResult | ErrorResult;
-
-            if (toolResultData.success) {
-              createdEvent = toolResultData.createdEvent;
-              resultText = toolResultData.message;
-            } else {
-              resultText = toolResultData.error;
-            }
-          }
-        }
-      }
-    } else {
-      // 沒有 tool call 時，直接創建事件
-      const directResult = await createDirectEvent(
-        controller,
-        userMessage,
-        userId,
-        messageId,
-        timezone,
-      );
-
-      if (directResult.success) {
-        createdEvent = directResult.createdEvent;
-        resultText = directResult.message;
-      } else {
-        resultText = directResult.error;
-      }
+    // 如果有工具結果，使用工具結果
+    if (toolResultText) {
+      return {
+        success: true,
+        text: toolResultText,
+        toolCalls: result.toolCalls,
+        toolResults: result.toolResults,
+        createdEvent,
+      };
     }
 
-    return {
-      success: true,
-      text: resultText,
-      toolCalls: result.toolCalls,
-      toolResults: result.toolResults,
-      createdEvent, // 返回創建的活動
-    };
+    // 沒有工具調用時，直接創建事件
+    const directResult = await createDirectEvent(
+      controller,
+      userMessage,
+      userId,
+      messageId,
+      timezone,
+    );
+
+    if (directResult.success) {
+      return {
+        success: true,
+        text: directResult.message,
+        toolCalls: result.toolCalls,
+        toolResults: result.toolResults,
+        createdEvent: directResult.createdEvent,
+      };
+    } else {
+      return {
+        success: false,
+        error: directResult.error,
+      };
+    }
   } catch (error) {
-    // 頂層錯誤處理 - 只在這裡記錄錯誤
     console.error('🚀 ~ createEventWithAI ~ error:', error);
     const errorMessage = error instanceof Error ? error.message : '未知錯誤';
     return {
@@ -266,5 +301,3 @@ export const createEventWithAI = async (
     };
   }
 };
-
-export type CreateEventParams = z.infer<typeof createEventSchema>;
