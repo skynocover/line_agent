@@ -45,6 +45,10 @@
           "bucket_name": "line-agent-storage"
         }
       ],
+      // 生產環境也添加預熱觸發器
+      "triggers": {
+        "crons": ["*/15 * * * *"]
+      }
     }
   },
   // "ai": {

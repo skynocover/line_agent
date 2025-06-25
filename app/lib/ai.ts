@@ -196,9 +196,10 @@ const createEventTool = (
 const processToolResults = (
   toolCalls: any[],
   toolResults: any[] | undefined,
-): { text: string; createdEvent: typeof calendarEvents.$inferSelect | null } => {
+): { text: string; createdEvent: typeof calendarEvents.$inferSelect | null; success: boolean } => {
   let resultText = '';
   let createdEvent: typeof calendarEvents.$inferSelect | null = null;
+  let success = false;
 
   if (toolCalls.length > 0 && toolResults) {
     for (const toolCall of toolCalls) {
@@ -211,8 +212,10 @@ const processToolResults = (
           if (toolResultData.success) {
             createdEvent = toolResultData.createdEvent;
             resultText = toolResultData.message;
+            success = true;
           } else {
             resultText = toolResultData.error;
+            success = false;
           }
         }
         break; // 只處理第一個創建事件的工具調用
@@ -220,17 +223,30 @@ const processToolResults = (
     }
   }
 
-  return { text: resultText, createdEvent };
+  return { text: resultText, createdEvent, success };
 };
 
 // ============================================================================
 // MAIN AI FUNCTION
 // ============================================================================
 
+// AI 函數返回類型
+interface AIResult {
+  success: boolean;
+  text: string;
+  toolCalls: any[];
+  toolResults: any[];
+  createdEvent: typeof calendarEvents.$inferSelect | null;
+  error?: string;
+}
+
 /**
  * 使用 AI 創建事件的主要函數
  */
-export const createEventWithAI = async (userMessage: string, context: AIContext) => {
+export const createEventWithAI = async (
+  userMessage: string,
+  context: AIContext,
+): Promise<AIResult> => {
   const { userId, controller, apiKey, messageId } = context;
   const timezone = context.timezone || DEFAULT_TIMEZONE;
 
@@ -253,19 +269,21 @@ export const createEventWithAI = async (userMessage: string, context: AIContext)
     });
 
     // 處理工具調用結果
-    const { text: toolResultText, createdEvent } = processToolResults(
-      result.toolCalls || [],
-      result.toolResults,
-    );
+    const {
+      text: toolResultText,
+      createdEvent,
+      success: toolSuccess,
+    } = processToolResults(result.toolCalls || [], result.toolResults);
 
     // 如果有工具結果，使用工具結果
     if (toolResultText) {
       return {
-        success: true,
+        success: toolSuccess,
         text: toolResultText,
         toolCalls: result.toolCalls,
         toolResults: result.toolResults,
-        createdEvent,
+        createdEvent: createdEvent || null,
+        error: toolSuccess ? undefined : toolResultText,
       };
     }
 
@@ -285,19 +303,27 @@ export const createEventWithAI = async (userMessage: string, context: AIContext)
         toolCalls: result.toolCalls,
         toolResults: result.toolResults,
         createdEvent: directResult.createdEvent,
+        error: undefined,
       };
     } else {
       return {
         success: false,
+        text: '',
+        toolCalls: result.toolCalls,
+        toolResults: result.toolResults,
+        createdEvent: null,
         error: directResult.error,
       };
     }
   } catch (error) {
-    console.error('🚀 ~ createEventWithAI ~ error:', error);
-    const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+    const errorInfo = handleError(error, 'createEventWithAI');
     return {
       success: false,
-      error: `AI 處理失敗: ${errorMessage}`,
+      text: '',
+      toolCalls: [],
+      toolResults: [],
+      createdEvent: null,
+      error: errorInfo.userMessage,
     };
   }
 };

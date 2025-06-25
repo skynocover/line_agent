@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { R2Bucket, D1Database } from '@cloudflare/workers-types';
+import { R2Bucket, D1Database, ExportedHandlerScheduledHandler } from '@cloudflare/workers-types';
 import { fileTypeFromBuffer } from 'file-type';
 import { cors } from 'hono/cors';
 
@@ -14,7 +14,7 @@ import { CalendarEventController } from './calendar-events/controller';
 import { MessageController } from './messages/controller';
 import { createEventWithAI } from '../lib/ai';
 import { verifyLiffAccessToken, verifyUserIdMatch } from './middlewares/verify';
-import { handleError, shouldIgnoreError, formatUserErrorMessage } from '../lib/error-handler';
+import { handleError } from '../lib/error-handler';
 
 export type Bindings = {
   APP_STORAGE: R2Bucket;
@@ -183,6 +183,9 @@ const handleTextMessage = async (
         quoteToken: message.quoteToken,
       });
     } else {
+      if (aiResult.error?.includes('此訊息已經處理過，請勿重複提交')) {
+        return;
+      }
       // AI 處理失敗，回覆錯誤訊息（錯誤已在 AI 層級記錄）
       return await replyMessage({
         replyToken,
@@ -246,4 +249,15 @@ const handleGeneralFile = async (event: any, accessToken: string, controller: Fi
   }
 };
 
-export default app;
+export const scheduled: ExportedHandlerScheduledHandler<Bindings> = async () => {
+  console.log('🔥 Worker warmup triggered at:', new Date().toISOString());
+};
+
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+export default {
+  fetch: app.fetch,
+  scheduled,
+};

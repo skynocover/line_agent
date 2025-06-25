@@ -2,7 +2,6 @@ export interface ErrorInfo {
   type: 'db' | 'axios' | 'ai' | 'file' | 'unknown';
   code?: string;
   message: string;
-  shouldLog: boolean;
   shouldReply: boolean;
   userMessage: string; // 用戶可見的錯誤訊息
 }
@@ -89,11 +88,6 @@ const parseD1DatabaseError = (error: unknown): ErrorInfo => {
   const errorDetails = extractErrorDetails(error);
   const fullErrorText = `${errorDetails.message} ${errorDetails.cause} ${errorDetails.fullStack}`;
 
-  console.log('🔍 D1 錯誤詳細信息:');
-  console.log('  主要錯誤:', errorDetails.message);
-  console.log('  根本原因:', errorDetails.cause);
-  console.log('  完整鏈路:', errorDetails.fullStack);
-
   // UNIQUE constraint 錯誤 - message_id 重複
   if (fullErrorText.includes(D1_ERROR_TYPES.UNIQUE_CONSTRAINT)) {
     // 提取具體的約束失敗字段
@@ -111,7 +105,6 @@ const parseD1DatabaseError = (error: unknown): ErrorInfo => {
       code: 'UNIQUE_CONSTRAINT',
       message: `D1 唯一約束錯誤: ${constraintDetail} - ${errorDetails.cause}`,
       userMessage: '此訊息已經處理過，請勿重複提交',
-      shouldLog: false, // message_id 重複是正常情況，不需要記錄
       shouldReply: false, // 不需要回覆用戶
     };
   }
@@ -123,7 +116,6 @@ const parseD1DatabaseError = (error: unknown): ErrorInfo => {
       code: 'FOREIGN_KEY_CONSTRAINT',
       message: `D1 外鍵約束錯誤: ${errorDetails.cause}`,
       userMessage: '資料關聯錯誤',
-      shouldLog: true,
       shouldReply: true,
     };
   }
@@ -135,7 +127,6 @@ const parseD1DatabaseError = (error: unknown): ErrorInfo => {
       code: 'NOT_NULL_CONSTRAINT',
       message: `D1 非空約束錯誤: ${errorDetails.cause}`,
       userMessage: '必要資料缺失',
-      shouldLog: true,
       shouldReply: true,
     };
   }
@@ -147,7 +138,6 @@ const parseD1DatabaseError = (error: unknown): ErrorInfo => {
       code: 'CHECK_CONSTRAINT',
       message: `D1 檢查約束錯誤: ${errorDetails.cause}`,
       userMessage: '資料格式錯誤',
-      shouldLog: true,
       shouldReply: true,
     };
   }
@@ -157,7 +147,6 @@ const parseD1DatabaseError = (error: unknown): ErrorInfo => {
     type: 'db',
     message: `D1 資料庫錯誤: ${errorDetails.cause || errorDetails.message}`,
     userMessage: '資料處理失敗',
-    shouldLog: true,
     shouldReply: true,
   };
 };
@@ -172,7 +161,6 @@ export const parseError = (error: unknown, context?: string): ErrorInfo => {
       type: 'unknown',
       message: '未知錯誤',
       userMessage: '處理時發生未知錯誤',
-      shouldLog: true,
       shouldReply: true,
     };
   }
@@ -197,7 +185,6 @@ export const parseError = (error: unknown, context?: string): ErrorInfo => {
       type: 'ai',
       message: errorMessage,
       userMessage: 'AI 處理失敗，請稍後再試',
-      shouldLog: true,
       shouldReply: true,
     };
   }
@@ -208,7 +195,6 @@ export const parseError = (error: unknown, context?: string): ErrorInfo => {
       type: 'file',
       message: errorMessage,
       userMessage: '檔案處理失敗',
-      shouldLog: true,
       shouldReply: true,
     };
   }
@@ -218,7 +204,6 @@ export const parseError = (error: unknown, context?: string): ErrorInfo => {
     type: 'unknown',
     message: errorMessage,
     userMessage: '處理時發生錯誤',
-    shouldLog: true,
     shouldReply: true,
   };
 };
@@ -253,7 +238,6 @@ const parseAxiosError = (error: any): ErrorInfo => {
         code: 'INVALID_REPLY_TOKEN',
         message: 'Reply token 已過期',
         userMessage: '訊息已過期，無法回覆',
-        shouldLog: false, // 這是正常情況，不需要記錄
         shouldReply: false, // 不能回覆
       };
     }
@@ -265,7 +249,6 @@ const parseAxiosError = (error: any): ErrorInfo => {
         code: 'RATE_LIMIT',
         message: 'API 請求頻率過高',
         userMessage: '請求過於頻繁，請稍後再試',
-        shouldLog: true,
         shouldReply: false,
       };
     }
@@ -277,7 +260,6 @@ const parseAxiosError = (error: any): ErrorInfo => {
         code: 'INVALID_ACCESS_TOKEN',
         message: 'Access token 無效',
         userMessage: '認證失敗',
-        shouldLog: true,
         shouldReply: false,
       };
     }
@@ -291,7 +273,6 @@ const parseAxiosError = (error: any): ErrorInfo => {
         code: `HTTP_${statusCode}`,
         message: `客戶端錯誤 (${statusCode}): ${errorMessage}`,
         userMessage: '請求格式錯誤',
-        shouldLog: true,
         shouldReply: statusCode !== 429, // 429 是 rate limit，不回覆
       };
     }
@@ -302,7 +283,6 @@ const parseAxiosError = (error: any): ErrorInfo => {
         code: `HTTP_${statusCode}`,
         message: `伺服器錯誤 (${statusCode})`,
         userMessage: '服務暫時不可用，請稍後再試',
-        shouldLog: true,
         shouldReply: true,
       };
     }
@@ -313,7 +293,6 @@ const parseAxiosError = (error: any): ErrorInfo => {
     type: 'axios',
     message: `網路請求失敗: ${errorMessage}`,
     userMessage: '網路連線失敗',
-    shouldLog: true,
     shouldReply: true,
   };
 };
@@ -324,29 +303,12 @@ const parseAxiosError = (error: any): ErrorInfo => {
 export const handleError = (error: unknown, context?: string): ErrorInfo => {
   const errorInfo = parseError(error, context);
 
-  if (errorInfo.shouldLog) {
-    const logMessage = context
-      ? `🚀 ~ ${context} ~ error: ${errorInfo.message}`
-      : `🚀 ~ error: ${errorInfo.message}`;
+  // 錯誤發生當下就直接印出
+  const logMessage = context
+    ? `🚀 ~ ${context} ~ error: ${errorInfo.message}`
+    : `🚀 ~ error: ${errorInfo.message}`;
 
-    console.error(logMessage, error);
-  }
+  console.error(logMessage, error);
 
   return errorInfo;
-};
-
-/**
- * 檢查錯誤是否應該被忽略（不記錄，不回覆）
- */
-export const shouldIgnoreError = (error: unknown): boolean => {
-  const errorInfo = parseError(error);
-  return !errorInfo.shouldLog && !errorInfo.shouldReply;
-};
-
-/**
- * 格式化用戶錯誤訊息
- */
-export const formatUserErrorMessage = (error: unknown, context?: string): string => {
-  const errorInfo = parseError(error, context);
-  return errorInfo.userMessage;
 };
