@@ -29,8 +29,7 @@ const replyMessage = async ({
     `https://api.line.me/v2/bot/message/reply`,
     {
       replyToken,
-      messages: [{ type: 'text', text: message }],
-      // messages: [{ type: 'text', text: message, quoteToken }],
+      messages: [{ type: 'text', text: message, quoteToken }],
     },
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );

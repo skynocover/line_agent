@@ -182,7 +182,7 @@ const createEventTool = (
         messageId,
       };
 
-      console.log('🚀 ~ createEventTool ~ eventData:', eventData);
+      console.log('🚀 ~ createEventTool ~ eventData:', JSON.stringify(eventData));
       return await executeCreateEvent(controller, eventData, timezone);
     },
   });

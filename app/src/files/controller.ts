@@ -28,7 +28,6 @@ export class FileController {
       limit,
       offset,
       orderBy: (files, { asc, desc }) => {
-        console.log('sort', sort);
         if (sort === 'name') {
           return order === 'desc' ? [desc(files.fileName)] : [asc(files.fileName)];
         }
