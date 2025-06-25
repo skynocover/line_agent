@@ -257,9 +257,11 @@ export const createEventWithAI = async (
   const timezone = context.timezone || DEFAULT_TIMEZONE;
 
   try {
+    console.log('DDDDD');
     const ai = createGoogleGenerativeAI({ apiKey });
     const userLocalDate = getUserLocalDateString(timezone);
     const eventTool = createEventTool(controller, userId, messageId, timezone);
+    console.log('EEEEEE');
 
     const result = await generateText({
       model: ai(AI_MODEL),
@@ -273,6 +275,7 @@ export const createEventWithAI = async (
       tools: { createEvent: eventTool },
       toolChoice: 'auto',
     });
+    console.log('FFFFF');
 
     // 處理工具調用結果
     const {

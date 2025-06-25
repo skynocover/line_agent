@@ -158,7 +158,9 @@ const handleTextMessage = async (
   };
 
   try {
+    console.log('AAAAAA');
     const savedMessageId = await messageController.createMessage(messageData);
+    console.log('BBBBB');
 
     // 使用 AI 創建事件
     const aiResult = await createEventWithAI(message.text, {
@@ -167,6 +169,7 @@ const handleTextMessage = async (
       apiKey: googleApiKey,
       messageId: message.id,
     });
+    console.log('CCCCC');
 
     // 處理 AI 結果
     if (aiResult.success) {
