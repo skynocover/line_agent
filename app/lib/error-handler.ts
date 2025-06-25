@@ -155,6 +155,7 @@ const parseD1DatabaseError = (error: unknown): ErrorInfo => {
  * 解析並分類錯誤
  */
 export const parseError = (error: unknown, context?: string): ErrorInfo => {
+  console.log('GGGGGGG');
   // 處理 null 或 undefined
   if (!error) {
     return {
@@ -164,11 +165,13 @@ export const parseError = (error: unknown, context?: string): ErrorInfo => {
       shouldReply: true,
     };
   }
+  console.log('HHHHHH');
 
   // 優先檢查 D1 資料庫錯誤
   if (isD1DatabaseError(error)) {
     return parseD1DatabaseError(error);
   }
+  console.log('IIIIII');
 
   // 轉換為字串以便檢查
   const errorString = String(error);
@@ -178,6 +181,7 @@ export const parseError = (error: unknown, context?: string): ErrorInfo => {
   if (isAxiosError(error)) {
     return parseAxiosError(error);
   }
+  console.log('JJJJJJ');
 
   // AI 相關錯誤
   if (context && context.includes('AI')) {
@@ -188,6 +192,7 @@ export const parseError = (error: unknown, context?: string): ErrorInfo => {
       shouldReply: true,
     };
   }
+  console.log('KKKKKK');
 
   // 檔案相關錯誤
   if (context && context.includes('file')) {
@@ -198,6 +203,7 @@ export const parseError = (error: unknown, context?: string): ErrorInfo => {
       shouldReply: true,
     };
   }
+  console.log('LLLLLL');
 
   // 一般錯誤
   return {

@@ -257,7 +257,6 @@ export const createEventWithAI = async (
   const timezone = context.timezone || DEFAULT_TIMEZONE;
 
   try {
-    console.log('DDDDD');
     const ai = createGoogleGenerativeAI({ apiKey });
     const userLocalDate = getUserLocalDateString(timezone);
     const eventTool = createEventTool(controller, userId, messageId, timezone);
@@ -336,6 +335,8 @@ export const createEventWithAI = async (
       };
     }
   } catch (error) {
+    console.log('GGGGG');
+    console.log('🚀 ~ error:', JSON.stringify(error));
     const errorInfo = parseError(error, 'createEventWithAI');
     console.error('🚀 ~ error:', errorInfo.message);
     return {
