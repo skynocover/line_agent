@@ -8,7 +8,7 @@ import { parseError } from './error-handler';
 
 const DEFAULT_TIMEZONE = 'Asia/Taipei';
 const DEFAULT_EVENT_DURATION_HOURS = 1;
-const AI_MODEL = 'gemini-2.0-flash-exp';
+const AI_MODEL = 'gemini-3.1-flash-lite';
 
 // ============================================================================
 // TYPES & SCHEMAS
